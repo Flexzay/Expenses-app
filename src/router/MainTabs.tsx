@@ -1,9 +1,10 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { HomeScreen } from "@/screens/HomeScreen";
+import { PredictionsScreen } from "@/screens/PredictionsScreen";
+import { ProfileScreen } from "@/screens/ProfileScreen";
 
-import HomeScreen from "@/screens/app/HomeScreen";
-import PredictionsScreen from "@/screens/app/PredictionsScreen";
-import ProfileScreen from "@/screens/app/ProfileScreen";
+
 
 export type MainTabParamList = {
   Home: undefined;
