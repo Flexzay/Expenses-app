@@ -4,7 +4,7 @@ import AuthStack from "./AuthStack";
 import MainTabs from "./MainTabs";
 
 export default function AppNavigator() {
-  const isAuthenticated = true; 
+  const isAuthenticated = false; 
 
   return (
     <NavigationContainer>
