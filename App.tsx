@@ -1,6 +1,7 @@
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AppNavigator from "@/router/AppNavigator";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 
 const queryClient = new QueryClient();
@@ -8,7 +9,9 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppNavigator />
+      <SafeAreaProvider>
+        <AppNavigator />
+      </SafeAreaProvider>
     </QueryClientProvider>
   );
 }
