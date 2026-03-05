@@ -11,7 +11,7 @@ import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
 
 // — datos simulados —
-const USER_NAME = "Juan";
+const USER_NAME = "Ricardo";
 
 const SUMMARY = {
   totalSpent: 320000,

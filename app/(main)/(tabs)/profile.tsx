@@ -15,8 +15,8 @@ import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
 
 const USER = {
-  name: "Juan Pérez",
-  email: "juan@ejemplo.com",
+  name: "Ricardo Rivera",
+  email: "ricardo@ejemplo.com",
   createdAt: "4 de marzo, 2026",
 };
 
