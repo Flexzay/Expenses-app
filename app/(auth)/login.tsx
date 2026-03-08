@@ -1,19 +1,22 @@
-import { useForm, Controller } from "react-hook-form";
+import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  TextInput,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-  Keyboard,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useLogin } from "@/hooks/useAuth";
 
 type LoginForm = {
   email: string;
@@ -21,37 +24,39 @@ type LoginForm = {
 };
 
 export default function LoginScreen() {
-  const { mutate: login, isPending } = useLogin();
+  const { login } = useAuth();
+  const [isPending, setIsPending] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>({
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = (data: LoginForm) => {
-    login({ email: data.email, password: data.password });
+  const onSubmit = async (data: LoginForm) => {
+    setIsPending(true);
+    try {
+      await login(data.email, data.password);
+    } catch {
+      Alert.alert("Error", "Email o contraseña incorrectos.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-     
           <TouchableOpacity
             activeOpacity={1}
             onPress={Keyboard.dismiss}
@@ -70,8 +75,7 @@ export default function LoginScreen() {
                   name="email"
                   rules={{
                     required: "Email requerido",
-                    validate: (value) =>
-                      value.includes("@") || "Email inválido",
+                    validate: (v) => v.includes("@") || "Email inválido",
                   }}
                   render={({ field: { onChange, value } }) => (
                     <>
@@ -134,6 +138,17 @@ export default function LoginScreen() {
                 onPress={handleSubmit(onSubmit)}
                 disabled={isPending}
               />
+
+              <TouchableOpacity
+                style={styles.footer}
+                onPress={() => router.push("/(auth)/register")}
+                disabled={isPending}
+              >
+                <Text style={styles.footerText}>
+                  ¿No tienes cuenta?{" "}
+                  <Text style={styles.footerLink}>Regístrate</Text>
+                </Text>
+              </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </ScrollView>
@@ -143,13 +158,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scroll: {
-    flexGrow: 1,
-  },
+  safe: { flex: 1, backgroundColor: "#FFFFFF" },
+  scroll: { flexGrow: 1 },
   container: {
     flex: 1,
     paddingHorizontal: 28,
@@ -157,30 +167,12 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
     justifyContent: "center",
   },
-  header: {
-    marginBottom: 36,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111111",
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#888888",
-  },
-  form: {
-    gap: 16,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333333",
-  },
+  header: { marginBottom: 36 },
+  title: { fontSize: 30, fontWeight: "800", color: "#111111", marginBottom: 6 },
+  subtitle: { fontSize: 15, color: "#888888" },
+  form: { gap: 16 },
+  field: { gap: 6 },
+  label: { fontSize: 14, fontWeight: "600", color: "#333333" },
   input: {
     borderWidth: 1.5,
     borderColor: "#E5E5E5",
@@ -191,24 +183,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     fontSize: 16,
   },
-  footer: {
-    alignItems: "center",
-    marginTop: 24,
-  },
-  footerText: {
-    color: "#888888",
-    fontSize: 14,
-  },
-  footerLink: {
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  inputError: {
-    borderColor: "#FF4444",
-  },
-  error: {
-    fontSize: 12,
-    color: "#FF4444",
-    marginTop: 4,
-  },
+  footer: { alignItems: "center", marginTop: 8, paddingVertical: 12 },
+  footerText: { color: "#888888", fontSize: 14 },
+  footerLink: { color: Colors.primary, fontWeight: "700" },
+  inputError: { borderColor: "#FF4444" },
+  error: { fontSize: 12, color: "#FF4444", marginTop: 4 },
 });

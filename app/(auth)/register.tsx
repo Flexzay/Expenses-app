@@ -1,20 +1,22 @@
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
-import { useForm, Controller } from "react-hook-form";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  TextInput,
-  KeyboardAvoidingView,
-  ScrollView,
-  Platform,
-  Keyboard,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRegister } from "@/hooks/useAuth";
 
 type RegisterForm = {
   name: string;
@@ -24,7 +26,9 @@ type RegisterForm = {
 };
 
 export default function RegisterScreen() {
-  const { mutate: register, isPending } = useRegister();
+  const { register } = useAuth();
+  const [isPending, setIsPending] = useState(false);
+
   const {
     control,
     handleSubmit,
@@ -41,18 +45,24 @@ export default function RegisterScreen() {
 
   const password = watch("password");
 
-  const onSubmit = (data: RegisterForm) => {
-    register({
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      password_confirmation: data.password_confirmation,
-    });
+  const onSubmit = async (data: RegisterForm) => {
+    setIsPending(true);
+    try {
+      await register(
+        data.name,
+        data.email,
+        data.password,
+        data.password_confirmation,
+      );
+    } catch {
+      Alert.alert("Error", "Registro falló. Verifica tus datos.");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -73,7 +83,6 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.form}>
-              {/* Nombre */}
               <View style={styles.field}>
                 <Text style={styles.label}>Nombre</Text>
                 <Controller
@@ -101,7 +110,6 @@ export default function RegisterScreen() {
                 />
               </View>
 
-              {/* Email */}
               <View style={styles.field}>
                 <Text style={styles.label}>Email</Text>
                 <Controller
@@ -137,7 +145,6 @@ export default function RegisterScreen() {
                 />
               </View>
 
-              {/* Password */}
               <View style={styles.field}>
                 <Text style={styles.label}>Contraseña</Text>
                 <Controller
@@ -171,7 +178,6 @@ export default function RegisterScreen() {
                 />
               </View>
 
-              {/* Confirm Password */}
               <View style={styles.field}>
                 <Text style={styles.label}>Confirmar contraseña</Text>
                 <Controller
@@ -179,8 +185,8 @@ export default function RegisterScreen() {
                   name="password_confirmation"
                   rules={{
                     required: "Confirma tu contraseña",
-                    validate: (value) =>
-                      value === password || "Las contraseñas no coinciden",
+                    validate: (v) =>
+                      v === password || "Las contraseñas no coinciden",
                   }}
                   render={({ field: { onChange, value } }) => (
                     <>
@@ -212,7 +218,6 @@ export default function RegisterScreen() {
                 disabled={isPending}
               />
 
-            
               <TouchableOpacity
                 style={styles.footer}
                 onPress={() => router.back()}
@@ -232,13 +237,8 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  scroll: {
-    flexGrow: 1,
-  },
+  safe: { flex: 1, backgroundColor: "#FFFFFF" },
+  scroll: { flexGrow: 1 },
   container: {
     flex: 1,
     paddingHorizontal: 28,
@@ -246,30 +246,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     justifyContent: "center",
   },
-  header: {
-    marginBottom: 36,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111111",
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#888888",
-  },
-  form: {
-    gap: 16,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333333",
-  },
+  header: { marginBottom: 36 },
+  title: { fontSize: 30, fontWeight: "800", color: "#111111", marginBottom: 6 },
+  subtitle: { fontSize: 15, color: "#888888" },
+  form: { gap: 16 },
+  field: { gap: 6 },
+  label: { fontSize: 14, fontWeight: "600", color: "#333333" },
   input: {
     borderWidth: 1.5,
     borderColor: "#E5E5E5",
@@ -280,25 +262,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     fontSize: 16,
   },
-  footer: {
-    alignItems: "center",
-    marginTop: 8,
-    paddingVertical: 12,
-  },
-  footerText: {
-    color: "#888888",
-    fontSize: 14,
-  },
-  footerLink: {
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  inputError: {
-    borderColor: "#FF4444",
-  },
-  error: {
-    fontSize: 12,
-    color: "#FF4444",
-    marginTop: 4,
-  },
+  footer: { alignItems: "center", marginTop: 8, paddingVertical: 12 },
+  footerText: { color: "#888888", fontSize: 14 },
+  footerLink: { color: Colors.primary, fontWeight: "700" },
+  inputError: { borderColor: "#FF4444" },
+  error: { fontSize: 12, color: "#FF4444", marginTop: 4 },
 });
