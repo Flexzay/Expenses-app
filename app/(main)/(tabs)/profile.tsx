@@ -1,20 +1,20 @@
-import { router } from "expo-router";
+import { ProfileSkeleton } from "@/components/ui/skeleton";
+import { useLogout, useProfile } from "@/hooks/useAuth";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
   TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { Button } from "../../../components/ui/Button";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-import { useProfile, useLogout } from "@/hooks/useAuth";
 
 export default function ProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,24 +23,17 @@ export default function ProfileScreen() {
   const { data, isLoading, isError } = useProfile();
   const { mutate: logout } = useLogout();
 
-  // La API devuelve monthly_amount directamente
   const myAmount = data?.monthly_amount ?? null;
 
   const handleSave = () => {
     const parsed = parseFloat(amountInput);
     if (!isNaN(parsed) && parsed > 0) {
-      // TODO: conectar con PUT /api/profile/amount
+      // TODO: PUT /api/profile/amount
       setModalVisible(false);
       setAmountInput("");
     }
   };
 
-  const handleEdit = () => {
-    setAmountInput(myAmount?.toString() ?? "");
-    setModalVisible(true);
-  };
-
-  
   const formattedDate = data?.created_at
     ? new Date(data.created_at).toLocaleDateString("es-CO", {
         year: "numeric",
@@ -48,22 +41,6 @@ export default function ProfileScreen() {
         day: "numeric",
       })
     : "—";
-
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <View style={styles.centered}>
-        <Text style={{ color: Colors.textMuted }}>Error al cargar el perfil</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -73,95 +50,140 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Avatar */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarLetter}>
-              {data.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <Text style={styles.name}>{data.name}</Text>
-          <Text style={styles.email}>{data.email}</Text>
-        </View>
-
-        {/* Mi aporte */}
-        <Text style={styles.sectionLabel}>Mi aporte</Text>
-        <View style={styles.aportCard}>
-          <View style={styles.aportLeft}>
-            <View style={styles.aportIconWrap}>
-              <Ionicons name="wallet-outline" size={20} color={Colors.primary} />
-            </View>
-            <View>
-              <Text style={styles.aportLabel}>Mi contribución mensual</Text>
-              {myAmount ? (
-                <Text style={styles.aportAmount}>
-                  ${myAmount.toLocaleString()}
-                </Text>
-              ) : (
-                <Text style={styles.aportEmpty}>Sin definir</Text>
-              )}
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.aportEditBtn}
-            onPress={myAmount ? handleEdit : () => setModalVisible(true)}
-          >
+        {isLoading ? (
+          <ProfileSkeleton />
+        ) : isError || !data ? (
+          <View style={styles.errorWrap}>
             <Ionicons
-              name={myAmount ? "pencil-outline" : "add"}
-              size={18}
-              color={Colors.primary}
+              name="cloud-offline-outline"
+              size={40}
+              color={Colors.textMuted}
             />
-          </TouchableOpacity>
-        </View>
-
-        {/* Info */}
-        <Text style={styles.sectionLabel}>Información</Text>
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Nombre</Text>
-              <Text style={styles.infoValue}>{data.name}</Text>
-            </View>
+            <Text style={styles.errorText}>Error al cargar el perfil</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Ionicons name="mail-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{data.email}</Text>
+        ) : (
+          <>
+            {/* Avatar */}
+            <View style={styles.avatarSection}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarLetter}>
+                  {data.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.name}>{data.name}</Text>
+              <Text style={styles.email}>{data.email}</Text>
             </View>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Miembro desde</Text>
-              <Text style={styles.infoValue}>{formattedDate}</Text>
+
+            {/* Mi aporte */}
+            <Text style={styles.sectionLabel}>Mi aporte</Text>
+            <View style={styles.aportCard}>
+              <View style={styles.aportLeft}>
+                <View style={styles.aportIconWrap}>
+                  <Ionicons
+                    name="wallet-outline"
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </View>
+                <View>
+                  <Text style={styles.aportLabel}>Mi contribución mensual</Text>
+                  {myAmount ? (
+                    <Text style={styles.aportAmount}>
+                      ${myAmount.toLocaleString()}
+                    </Text>
+                  ) : (
+                    <Text style={styles.aportEmpty}>Sin definir</Text>
+                  )}
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.aportEditBtn}
+                onPress={
+                  myAmount
+                    ? () => {
+                        setAmountInput(myAmount.toString());
+                        setModalVisible(true);
+                      }
+                    : () => setModalVisible(true)
+                }
+              >
+                <Ionicons
+                  name={myAmount ? "pencil-outline" : "add"}
+                  size={18}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
             </View>
-          </View>
-        </View>
 
-        {/* Colaboradores */}
-        <Text style={styles.sectionLabel}>Equipo</Text>
-        <TouchableOpacity
-          style={styles.collaboratorBtn}
-          activeOpacity={0.8}
-          onPress={() => router.push("/(main)/collaborators")}
-        >
-          <Ionicons name="people-outline" size={20} color={Colors.primary} />
-          <Text style={styles.collaboratorText}>Colaboradores</Text>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
-        </TouchableOpacity>
+            {/* Info */}
+            <Text style={styles.sectionLabel}>Información</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <View style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Nombre</Text>
+                  <Text style={styles.infoValue}>{data.name}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <View style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Email</Text>
+                  <Text style={styles.infoValue}>{data.email}</Text>
+                </View>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.infoRow}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={18}
+                  color={Colors.primary}
+                />
+                <View style={styles.infoText}>
+                  <Text style={styles.infoLabel}>Miembro desde</Text>
+                  <Text style={styles.infoValue}>{formattedDate}</Text>
+                </View>
+              </View>
+            </View>
 
-        {/* Cerrar sesión */}
-        <View style={{ height: 24 }} />
-        <Button
-          label="Cerrar sesión"
-          variant="ghost"
-          onPress={() => logout()}
-        />
-        <View style={{ height: 40 }} />
+            {/* Colaboradores */}
+            <Text style={styles.sectionLabel}>Equipo</Text>
+            <TouchableOpacity
+              style={styles.collaboratorBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push("/(main)/collaborators")}
+            >
+              <Ionicons
+                name="people-outline"
+                size={20}
+                color={Colors.primary}
+              />
+              <Text style={styles.collaboratorText}>Colaboradores</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={Colors.textMuted}
+              />
+            </TouchableOpacity>
+
+            <View style={{ height: 24 }} />
+            <Button
+              label="Cerrar sesión"
+              variant="ghost"
+              onPress={() => logout()}
+            />
+            <View style={{ height: 40 }} />
+          </>
+        )}
       </ScrollView>
 
       {/* Modal aporte */}
@@ -181,11 +203,9 @@ export default function ProfileScreen() {
                 <Ionicons name="close" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-
             <Text style={styles.modalSubtitle}>
               Define cuánto aportarás al presupuesto compartido este mes.
             </Text>
-
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Valor a aportar</Text>
               <TextInput
@@ -198,7 +218,6 @@ export default function ProfileScreen() {
                 autoFocus
               />
             </View>
-
             <View style={styles.modalActions}>
               <Button
                 label="Cancelar"
@@ -215,24 +234,17 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { padding: 20, paddingTop: 24 },
+  errorWrap: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centered: {
-    flex: 1,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.background,
+    paddingTop: 80,
+    gap: 12,
   },
-  scroll: {
-    padding: 20,
-    paddingTop: 24,
-  },
-  avatarSection: {
-    alignItems: "center",
-    marginBottom: 28,
-  },
+  errorText: { fontSize: 15, color: Colors.textMuted },
+  avatarSection: { alignItems: "center", marginBottom: 28 },
   avatar: {
     width: 72,
     height: 72,
@@ -242,21 +254,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  avatarLetter: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+  avatarLetter: { fontSize: 30, fontWeight: "700", color: "#FFFFFF" },
   name: {
     fontSize: 20,
     fontWeight: "700",
     color: Colors.text,
     marginBottom: 4,
   },
-  email: {
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
+  email: { fontSize: 14, color: Colors.textMuted },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
@@ -276,12 +281,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
   },
-  aportLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  aportLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
   aportIconWrap: {
     width: 42,
     height: 42,
@@ -290,21 +290,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  aportLabel: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginBottom: 2,
-  },
-  aportAmount: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: Colors.primary,
-  },
-  aportEmpty: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.textMuted,
-  },
+  aportLabel: { fontSize: 13, color: Colors.textMuted, marginBottom: 2 },
+  aportAmount: { fontSize: 20, fontWeight: "800", color: Colors.primary },
+  aportEmpty: { fontSize: 15, fontWeight: "600", color: Colors.textMuted },
   aportEditBtn: {
     width: 38,
     height: 38,
@@ -329,23 +317,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  infoText: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-  },
+  infoText: { flex: 1 },
+  infoLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
+  infoValue: { fontSize: 15, fontWeight: "600", color: Colors.text },
+  divider: { height: 1, backgroundColor: Colors.border },
   collaboratorBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -380,25 +355,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: Colors.text },
   modalSubtitle: {
     fontSize: 14,
     color: Colors.textMuted,
     lineHeight: 20,
     marginTop: -8,
   },
-  field: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-  },
+  field: { gap: 6 },
+  fieldLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
   input: {
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -410,8 +375,5 @@ const styles = StyleSheet.create({
     color: Colors.text,
     backgroundColor: Colors.background,
   },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  modalActions: { flexDirection: "row", gap: 12 },
 });

@@ -1,8 +1,7 @@
-// src/hooks/useAuth.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Alert } from "react-native";
-import { loginService, profileService, registerService } from "@/services/auth";
+import { loginService, logoutService, profileService, registerService } from "@/services/auth";
 import { setToken } from "@/services/api";
 
 export function useRegister() {
@@ -51,12 +50,15 @@ export function useLogout() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async () => {
-      await setToken(null);
-    },
+    mutationFn: logoutService,
     onSuccess: () => {
       queryClient.clear();
-      router.replace("/(auth)/login");
+      router.replace("/welcome"); 
+    },
+    onError: () => {
+      setToken(null);
+      queryClient.clear();
+      router.replace("/welcome");
     },
   });
 }

@@ -1,3 +1,5 @@
+import { HomeSkeleton } from "@/components/ui/skeleton";
+import { useProfile } from "@/hooks/useAuth";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import {
@@ -9,9 +11,6 @@ import {
 } from "react-native";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-
-// — datos simulados —
-const USER_NAME = "Ricardo";
 
 const SUMMARY = {
   totalSpent: 320000,
@@ -62,13 +61,14 @@ const QUICK_STATS = [
 ];
 
 export default function HomeScreen() {
-  const progressWidth = `${Math.min(SUMMARY.percentUsed, 100)}%`;
   const progressColor =
     SUMMARY.percentUsed >= 90
       ? Colors.danger
       : SUMMARY.percentUsed >= 70
         ? "#F59E0B"
         : Colors.accent;
+
+  const { data, isLoading } = useProfile();
 
   return (
     <View style={styles.container}>
@@ -82,107 +82,123 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* Saludo */}
-        <View style={styles.greeting}>
-          <Text style={styles.greetingText}>Hola, {USER_NAME} 👋</Text>
-          <Text style={styles.greetingMonth}>Marzo 2026</Text>
-        </View>
-
-        {/* Card principal presupuesto */}
-        <View style={styles.budgetCard}>
-          <View style={styles.budgetRow}>
-            <View>
-              <Text style={styles.budgetLabel}>Gastado este mes</Text>
-              <Text style={styles.budgetAmount}>
-                ${SUMMARY.totalSpent.toLocaleString()}
+        {isLoading ? (
+          <HomeSkeleton />
+        ) : (
+          <>
+            {/* Saludo */}
+            <View style={styles.greeting}>
+              <Text style={styles.greetingText}>
+                Hola, {data?.name ?? "..."} 👋
+              </Text>
+              <Text style={styles.greetingMonth}>
+                {new Date().toLocaleDateString("es-CO", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </Text>
             </View>
-            <View style={styles.remainingBadge}>
-              <Text style={styles.remainingLabel}>Disponible</Text>
-              <Text style={styles.remainingAmount}>
-                ${SUMMARY.remaining.toLocaleString()}
-              </Text>
-            </View>
-          </View>
 
-          {/* Barra de progreso */}
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: progressWidth, backgroundColor: progressColor },
-              ]}
-            />
-          </View>
-          <View style={styles.progressLabels}>
-            <Text style={styles.progressPct}>{SUMMARY.percentUsed}% usado</Text>
-            <Text style={styles.progressBudget}>
-              Presupuesto: ${SUMMARY.budget.toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Quick stats */}
-        <View style={styles.statsRow}>
-          {QUICK_STATS.map((stat) => (
-            <View key={stat.label} style={styles.statCard}>
-              <Ionicons
-                name={stat.icon as any}
-                size={20}
-                color={Colors.primary}
-              />
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+            {/* Card principal presupuesto */}
+            <View style={styles.budgetCard}>
+              <View style={styles.budgetRow}>
+                <View>
+                  <Text style={styles.budgetLabel}>Gastado este mes</Text>
+                  <Text style={styles.budgetAmount}>
+                    ${SUMMARY.totalSpent.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.remainingBadge}>
+                  <Text style={styles.remainingLabel}>Disponible</Text>
+                  <Text style={styles.remainingAmount}>
+                    ${SUMMARY.remaining.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(SUMMARY.percentUsed, 100)}%`,
+                      backgroundColor: progressColor,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.progressLabels}>
+                <Text style={styles.progressPct}>
+                  {SUMMARY.percentUsed}% usado
+                </Text>
+                <Text style={styles.progressBudget}>
+                  Presupuesto: ${SUMMARY.budget.toLocaleString()}
+                </Text>
+              </View>
             </View>
-          ))}
-        </View>
 
-        {/* Últimos gastos */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Últimos gastos</Text>
-          <TouchableOpacity
-            onPress={() => router.push("/(main)/expenses" as any)}
-          >
-            <Text style={styles.sectionLink}>Ver todos</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Quick stats */}
+            <View style={styles.statsRow}>
+              {QUICK_STATS.map((stat) => (
+                <View key={stat.label} style={styles.statCard}>
+                  <Ionicons
+                    name={stat.icon as any}
+                    size={20}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
+              ))}
+            </View>
 
-        {RECENT_EXPENSES.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.expenseRow}
-            activeOpacity={0.7}
-            onPress={() =>
-              router.push({
-                pathname: "/(main)/expense-detail",
-                params: { id: item.id },
-              } as any)
-            }
-          >
-            <View style={styles.expenseIcon}>
-              <Ionicons
-                name={item.icon as any}
-                size={20}
-                color={Colors.primary}
-              />
+            {/* Últimos gastos */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Últimos gastos</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/(main)/expenses" as any)}
+              >
+                <Text style={styles.sectionLink}>Ver todos</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.expenseInfo}>
-              <Text style={styles.expenseTitle}>{item.title}</Text>
-              <Text style={styles.expenseCategory}>{item.category}</Text>
-            </View>
-            <View style={styles.expenseRight}>
-              <Text style={styles.expenseAmount}>
-                -${item.amount.toLocaleString()}
-              </Text>
-              <Text style={styles.expenseDate}>{item.date}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
 
-        <View style={{ height: 100 }} />
+            {RECENT_EXPENSES.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.expenseRow}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(main)/expense-detail",
+                    params: { id: item.id },
+                  } as any)
+                }
+              >
+                <View style={styles.expenseIcon}>
+                  <Ionicons
+                    name={item.icon as any}
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </View>
+                <View style={styles.expenseInfo}>
+                  <Text style={styles.expenseTitle}>{item.title}</Text>
+                  <Text style={styles.expenseCategory}>{item.category}</Text>
+                </View>
+                <View style={styles.expenseRight}>
+                  <Text style={styles.expenseAmount}>
+                    -${item.amount.toLocaleString()}
+                  </Text>
+                  <Text style={styles.expenseDate}>{item.date}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            <View style={{ height: 100 }} />
+          </>
+        )}
       </ScrollView>
 
-      {/* FAB agregar gasto */}
+      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
@@ -195,31 +211,16 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    padding: 20,
-    paddingTop: 8,
-  },
-
-  // Saludo
-  greeting: {
-    marginBottom: 20,
-  },
-  greetingText: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: Colors.text,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { padding: 20, paddingTop: 8 },
+  greeting: { marginBottom: 20 },
+  greetingText: { fontSize: 22, fontWeight: "800", color: Colors.text },
   greetingMonth: {
     fontSize: 14,
     color: Colors.textMuted,
     marginTop: 2,
+    textTransform: "capitalize",
   },
-
-  // Budget card
   budgetCard: {
     backgroundColor: Colors.primary,
     borderRadius: 20,
@@ -237,11 +238,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.75)",
     marginBottom: 4,
   },
-  budgetAmount: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
+  budgetAmount: { fontSize: 30, fontWeight: "800", color: "#FFFFFF" },
   remainingBadge: {
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 12,
@@ -253,11 +250,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.75)",
     marginBottom: 2,
   },
-  remainingAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+  remainingAmount: { fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   progressTrack: {
     height: 8,
     backgroundColor: "rgba(255,255,255,0.25)",
@@ -265,30 +258,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     overflow: "hidden",
   },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  progressLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+  progressFill: { height: "100%", borderRadius: 999 },
+  progressLabels: { flexDirection: "row", justifyContent: "space-between" },
   progressPct: {
     fontSize: 12,
     color: "rgba(255,255,255,0.85)",
     fontWeight: "600",
   },
-  progressBudget: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.65)",
-  },
-
-  // Stats
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
+  progressBudget: { fontSize: 12, color: "rgba(255,255,255,0.65)" },
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 24 },
   statCard: {
     flex: 1,
     backgroundColor: Colors.card,
@@ -305,29 +283,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: "center",
   },
-  statLabel: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    textAlign: "center",
-  },
-
-  // Sección gastos
+  statLabel: { fontSize: 11, color: Colors.textMuted, textAlign: "center" },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  sectionLink: {
-    fontSize: 13,
-    color: Colors.primary,
-    fontWeight: "600",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: Colors.text },
+  sectionLink: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
   expenseRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -347,34 +311,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  expenseInfo: {
-    flex: 1,
-  },
+  expenseInfo: { flex: 1 },
   expenseTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: Colors.text,
     marginBottom: 2,
   },
-  expenseCategory: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  expenseRight: {
-    alignItems: "flex-end",
-  },
+  expenseCategory: { fontSize: 12, color: Colors.textMuted },
+  expenseRight: { alignItems: "flex-end" },
   expenseAmount: {
     fontSize: 15,
     fontWeight: "700",
     color: Colors.danger,
     marginBottom: 2,
   },
-  expenseDate: {
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
-
-  // FAB
+  expenseDate: { fontSize: 11, color: Colors.textMuted },
   fab: {
     position: "absolute",
     bottom: 20,
