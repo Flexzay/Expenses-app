@@ -1,7 +1,10 @@
+import { useCategories } from "@/hooks/useCategories";
+import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,29 +12,29 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Header } from "../../components/ui/Header";
 import { Button } from "../../components/ui/Button";
+import { Header } from "../../components/ui/Header";
 import { Colors } from "../../constants/colors";
-
-const CATEGORIES = [
-  { id: "1", name: "Gas",             icon: "flame-outline"           },
-  { id: "2", name: "Agua",            icon: "water-outline"           },
-  { id: "3", name: "Energía",         icon: "flash-outline"           },
-  { id: "4", name: "Entretenimiento", icon: "game-controller-outline" },
-  { id: "5", name: "Otros",           icon: "pricetag-outline"        },
-];
 
 export default function AddExpenseScreen() {
   const [amount, setAmount] = useState("");
+  const [displayAmount, setDisplayAmount] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("Hoy");
 
+  const { data: categories, isLoading: loadingCategories } = useCategories();
+
   const DATE_OPTIONS = ["Hoy", "Ayer", "Otro"];
+
+  const handleAmountChange = (text: string) => {
+    const raw = text.replace(/[^0-9]/g, "");
+    setAmount(raw);
+    setDisplayAmount(raw ? formatCOP(parseFloat(raw)) : "");
+  };
 
   const handleSave = () => {
     if (!amount || !selectedCategory) return;
-    // aquí irá la lógica para guardar
     console.log({ amount, description, selectedCategory, selectedDate });
     router.back();
   };
@@ -47,17 +50,15 @@ export default function AddExpenseScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-
         {/* Monto */}
         <View style={styles.amountSection}>
-          <Text style={styles.amountPrefix}>$</Text>
           <TextInput
             style={styles.amountInput}
             placeholder="0"
             placeholderTextColor={Colors.border}
             keyboardType="numeric"
-            value={amount}
-            onChangeText={setAmount}
+            value={displayAmount}
+            onChangeText={handleAmountChange}
             autoFocus
           />
         </View>
@@ -67,43 +68,64 @@ export default function AddExpenseScreen() {
 
         {/* Categoría */}
         <Text style={styles.sectionTitle}>Categoría</Text>
-        <View style={styles.categoriesGrid}>
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat.id;
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.categoryItem,
-                  isSelected && styles.categoryItemSelected,
-                ]}
-                onPress={() => setSelectedCategory(cat.id)}
-                activeOpacity={0.7}
-              >
-                <View
+
+        {loadingCategories ? (
+          <View style={styles.loadingCategories}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+          </View>
+        ) : categories?.length === 0 ? (
+          <TouchableOpacity
+            style={styles.emptyCategoryBtn}
+            onPress={() => router.push("/(main)/(tabs)/categories" as any)}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={20}
+              color={Colors.primary}
+            />
+            <Text style={styles.emptyCategoryText}>
+              No tienes categorías. Crea una primero.
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.categoriesGrid}>
+            {categories?.map((cat) => {
+              const isSelected = selectedCategory === cat.id.toString();
+              return (
+                <TouchableOpacity
+                  key={cat.id}
                   style={[
-                    styles.categoryIcon,
-                    isSelected && styles.categoryIconSelected,
+                    styles.categoryItem,
+                    isSelected && styles.categoryItemSelected,
                   ]}
+                  onPress={() => setSelectedCategory(cat.id.toString())}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name={cat.icon as any}
-                    size={22}
-                    color={isSelected ? "#FFFFFF" : Colors.primary}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.categoryName,
-                    isSelected && styles.categoryNameSelected,
-                  ]}
-                >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      isSelected && styles.categoryIconSelected,
+                    ]}
+                  >
+                    <Ionicons
+                      name="pricetag-outline"
+                      size={22}
+                      color={isSelected ? "#FFFFFF" : Colors.primary}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.categoryName,
+                      isSelected && styles.categoryNameSelected,
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         <View style={styles.divider} />
 
@@ -147,7 +169,6 @@ export default function AddExpenseScreen() {
 
         <View style={{ height: 32 }} />
 
-        {/* Botón guardar */}
         <Button
           label="Guardar gasto"
           onPress={handleSave}
@@ -161,14 +182,8 @@ export default function AddExpenseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    padding: 24,
-    paddingTop: 8,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { padding: 24, paddingTop: 8 },
 
   // Monto
   amountSection: {
@@ -178,12 +193,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 8,
   },
-  amountPrefix: {
-    fontSize: 40,
-    fontWeight: "800",
-    color: Colors.primary,
-    marginRight: 4,
-  },
+
   amountInput: {
     fontSize: 64,
     fontWeight: "800",
@@ -198,12 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 20,
-  },
-
+  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 20 },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
@@ -212,11 +217,24 @@ const styles = StyleSheet.create({
   },
 
   // Categorías
-  categoriesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+  loadingCategories: {
+    height: 80,
+    justifyContent: "center",
+    alignItems: "center",
   },
+  emptyCategoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderStyle: "dashed",
+    backgroundColor: Colors.card,
+  },
+  emptyCategoryText: { fontSize: 14, color: Colors.primary, fontWeight: "600" },
+  categoriesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   categoryItem: {
     alignItems: "center",
     gap: 6,
@@ -239,18 +257,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  categoryIconSelected: {
-    backgroundColor: Colors.primary,
-  },
+  categoryIconSelected: { backgroundColor: Colors.primary },
   categoryName: {
     fontSize: 12,
     fontWeight: "600",
     color: Colors.textMuted,
     textAlign: "center",
   },
-  categoryNameSelected: {
-    color: Colors.primary,
-  },
+  categoryNameSelected: { color: Colors.primary },
 
   // Descripción
   descInput: {
@@ -266,10 +280,7 @@ const styles = StyleSheet.create({
   },
 
   // Fecha
-  dateRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
+  dateRow: { flexDirection: "row", gap: 10 },
   dateChip: {
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -282,12 +293,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
-  dateChipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textMuted,
-  },
-  dateChipTextSelected: {
-    color: "#FFFFFF",
-  },
+  dateChipText: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
+  dateChipTextSelected: { color: "#FFFFFF" },
 });
