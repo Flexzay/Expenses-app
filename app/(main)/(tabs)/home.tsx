@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
+import { formatCOP } from "@/utils/currency";
 
 const SUMMARY = {
   totalSpent: 320000,
@@ -131,7 +132,7 @@ export default function HomeScreen() {
                   {SUMMARY.percentUsed}% usado
                 </Text>
                 <Text style={styles.progressBudget}>
-                  Presupuesto: ${SUMMARY.budget.toLocaleString()}
+                  Presupuesto: {formatCOP(data.monthly_amount)}
                 </Text>
               </View>
             </View>

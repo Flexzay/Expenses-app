@@ -15,6 +15,7 @@ import {
 import { Button } from "../../../components/ui/Button";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
+import { formatCOP } from "@/utils/currency";
 
 export default function ProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -89,7 +90,7 @@ export default function ProfileScreen() {
                   <Text style={styles.aportLabel}>Mi contribución mensual</Text>
                   {myAmount ? (
                     <Text style={styles.aportAmount}>
-                      ${myAmount.toLocaleString()}
+                     {formatCOP(data.monthly_amount)}
                     </Text>
                   ) : (
                     <Text style={styles.aportEmpty}>Sin definir</Text>
