@@ -4,8 +4,11 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
   TextInput,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
@@ -19,7 +22,12 @@ type LoginForm = {
 
 export default function LoginScreen() {
   const { mutate: login, isPending } = useLogin();
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
     defaultValues: {
       email: "",
       password: "",
@@ -27,98 +35,126 @@ export default function LoginScreen() {
   });
 
   const onSubmit = (data: LoginForm) => {
-    // Validación manual simple
-    if (!data.email.includes("@")) {
-      return setError("email", { message: "Email inválido" });
-    }
-    if (data.password.length < 6) {
-      return setError("password", { message: "Mínimo 6 caracteres" });
-    }
-    
     login({ email: data.email, password: data.password });
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        {/* Header igual */}
-        
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <Controller
-              control={control}
-              name="email"
-              rules={{
-                required: "Email requerido",
-                validate: (value) => value.includes("@") || "Email inválido",
-              }}
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <TextInput
-                    placeholder="tu@email.com"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={[styles.input, errors.email && styles.inputError]}
-                    value={value}
-                    onChangeText={onChange}
-                    editable={!isPending}
-                  />
-                  {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}
-                </>
-              )}
-            />
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contraseña</Text>
-            <Controller
-              control={control}
-              name="password"
-              rules={{
-                required: "Contraseña requerida",
-                minLength: { value: 6, message: "Mínimo 6 caracteres" },
-              }}
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <TextInput
-                    placeholder="••••••••"
-                    secureTextEntry
-                    style={[styles.input, errors.password && styles.inputError]}
-                    value={value}
-                    onChangeText={onChange}
-                    editable={!isPending}
-                  />
-                  {errors.password && <Text style={styles.error}>{errors.password.message}</Text>}
-                </>
-              )}
-            />
-          </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
 
-          <Button
-            label={isPending ? "Entrando..." : "Entrar"}
-            onPress={handleSubmit(onSubmit)}
-            disabled={isPending}
-          />
-        </View>
-        
-        {/* Footer igual */}
-      </View>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+     
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={Keyboard.dismiss}
+            style={styles.container}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Bienvenido</Text>
+              <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
+            </View>
+
+            <View style={styles.form}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Email</Text>
+                <Controller
+                  control={control}
+                  name="email"
+                  rules={{
+                    required: "Email requerido",
+                    validate: (value) =>
+                      value.includes("@") || "Email inválido",
+                  }}
+                  render={({ field: { onChange, value } }) => (
+                    <>
+                      <TextInput
+                        placeholder="tu@email.com"
+                        placeholderTextColor="#ABABAB"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        style={[
+                          styles.input,
+                          errors.email && styles.inputError,
+                        ]}
+                        value={value}
+                        onChangeText={onChange}
+                        editable={!isPending}
+                      />
+                      {errors.email && (
+                        <Text style={styles.error}>{errors.email.message}</Text>
+                      )}
+                    </>
+                  )}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.label}>Contraseña</Text>
+                <Controller
+                  control={control}
+                  name="password"
+                  rules={{
+                    required: "Contraseña requerida",
+                    minLength: { value: 6, message: "Mínimo 6 caracteres" },
+                  }}
+                  render={({ field: { onChange, value } }) => (
+                    <>
+                      <TextInput
+                        placeholder="••••••••"
+                        placeholderTextColor="#ABABAB"
+                        secureTextEntry
+                        style={[
+                          styles.input,
+                          errors.password && styles.inputError,
+                        ]}
+                        value={value}
+                        onChangeText={onChange}
+                        editable={!isPending}
+                      />
+                      {errors.password && (
+                        <Text style={styles.error}>
+                          {errors.password.message}
+                        </Text>
+                      )}
+                    </>
+                  )}
+                />
+              </View>
+
+              <Button
+                label={isPending ? "Entrando..." : "Entrar"}
+                onPress={handleSubmit(onSubmit)}
+                disabled={isPending}
+              />
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  scroll: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     paddingHorizontal: 28,
     paddingTop: 48,
-    paddingBottom: 24,
+    paddingBottom: 80,
     justifyContent: "center",
   },
   header: {
@@ -155,18 +191,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     fontSize: 16,
   },
-  forgotText: {
-    fontSize: 13,
-    color: Colors.primary,
-    textAlign: "right",
-    marginTop: -4,
-  },
   footer: {
-    position: "absolute",
-    bottom: 32,
-    left: 0,
-    right: 0,
     alignItems: "center",
+    marginTop: 24,
   },
   footerText: {
     color: "#888888",
@@ -185,7 +212,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-function setError(arg0: string, arg1: { message: string; }) {
-  throw new Error("Function not implemented.");
-}
-

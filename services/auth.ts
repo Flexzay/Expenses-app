@@ -14,7 +14,7 @@ type LoginPayload = {
 };
 
 type AuthResponse = {
-  token: string; 
+  token: string;
   user?: any;
 };
 

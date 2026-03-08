@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "http://http://127.0.0.1:8000"; 
+const BASE_URL = "http://192.168.1.3:8000";
 
 export const api = axios.create({
   baseURL: `${BASE_URL}/api`,
@@ -11,9 +11,7 @@ export const api = axios.create({
   },
 });
 
-
 const TOKEN_KEY = "auth_token";
-
 
 export async function setToken(token: string | null) {
   if (token) {
