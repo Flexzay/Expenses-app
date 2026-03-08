@@ -1,71 +1,113 @@
-import { router } from "expo-router";
+import { useForm, Controller } from "react-hook-form";
 import {
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLogin } from "@/hooks/useAuth";
+
+type LoginForm = {
+  email: string;
+  password: string;
+};
 
 export default function LoginScreen() {
+  const { mutate: login, isPending } = useLogin();
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = (data: LoginForm) => {
+    // Validación manual simple
+    if (!data.email.includes("@")) {
+      return setError("email", { message: "Email inválido" });
+    }
+    if (data.password.length < 6) {
+      return setError("password", { message: "Mínimo 6 caracteres" });
+    }
+    
+    login({ email: data.email, password: data.password });
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-
-        <View style={styles.header}>
-          <Text style={styles.title}>Iniciar sesión</Text>
-          <Text style={styles.subtitle}>Ingresa con tu correo y contraseña</Text>
-        </View>
-
+        {/* Header igual */}
+        
         <View style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
-            <TextInput
-              placeholder="tu@email.com"
-              placeholderTextColor="#ABABAB"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
+            <Controller
+              control={control}
+              name="email"
+              rules={{
+                required: "Email requerido",
+                validate: (value) => value.includes("@") || "Email inválido",
+              }}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <TextInput
+                    placeholder="tu@email.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={[styles.input, errors.email && styles.inputError]}
+                    value={value}
+                    onChangeText={onChange}
+                    editable={!isPending}
+                  />
+                  {errors.email && <Text style={styles.error}>{errors.email.message}</Text>}
+                </>
+              )}
             />
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              placeholder="••••••••"
-              placeholderTextColor="#ABABAB"
-              secureTextEntry
-              style={styles.input}
+            <Controller
+              control={control}
+              name="password"
+              rules={{
+                required: "Contraseña requerida",
+                minLength: { value: 6, message: "Mínimo 6 caracteres" },
+              }}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <TextInput
+                    placeholder="••••••••"
+                    secureTextEntry
+                    style={[styles.input, errors.password && styles.inputError]}
+                    value={value}
+                    onChangeText={onChange}
+                    editable={!isPending}
+                  />
+                  {errors.password && <Text style={styles.error}>{errors.password.message}</Text>}
+                </>
+              )}
             />
           </View>
 
-          <TouchableOpacity>
-            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-          </TouchableOpacity>
-
           <Button
-            label="Entrar"
-            onPress={() => router.replace("/(main)/home")}
+            label={isPending ? "Entrando..." : "Entrar"}
+            onPress={handleSubmit(onSubmit)}
+            disabled={isPending}
           />
         </View>
-
-        <TouchableOpacity
-          style={styles.footer}
-          onPress={() => router.push("/(auth)/register")}
-        >
-          <Text style={styles.footerText}>
-            ¿No tienes cuenta?{" "}
-            <Text style={styles.footerLink}>Regístrate</Text>
-          </Text>
-        </TouchableOpacity>
-
+        
+        {/* Footer igual */}
       </View>
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safe: {
@@ -134,4 +176,16 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: "700",
   },
+  inputError: {
+    borderColor: "#FF4444",
+  },
+  error: {
+    fontSize: 12,
+    color: "#FF4444",
+    marginTop: 4,
+  },
 });
+function setError(arg0: string, arg1: { message: string; }) {
+  throw new Error("Function not implemented.");
+}
+
