@@ -9,26 +9,27 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Button } from "../../../components/ui/Button";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-
-const USER = {
-  name: "Ricardo Rivera",
-  email: "ricardo@ejemplo.com",
-  createdAt: "4 de marzo, 2026",
-};
+import { useProfile, useLogout } from "@/hooks/useAuth";
 
 export default function ProfileScreen() {
-  const [myAmount, setMyAmount] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [amountInput, setAmountInput] = useState("");
+
+  const { data, isLoading, isError } = useProfile();
+  const { mutate: logout } = useLogout();
+
+  // La API devuelve monthly_amount directamente
+  const myAmount = data?.monthly_amount ?? null;
 
   const handleSave = () => {
     const parsed = parseFloat(amountInput);
     if (!isNaN(parsed) && parsed > 0) {
-      setMyAmount(parsed);
+      // TODO: conectar con PUT /api/profile/amount
       setModalVisible(false);
       setAmountInput("");
     }
@@ -38,6 +39,31 @@ export default function ProfileScreen() {
     setAmountInput(myAmount?.toString() ?? "");
     setModalVisible(true);
   };
+
+  
+  const formattedDate = data?.created_at
+    ? new Date(data.created_at).toLocaleDateString("es-CO", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "—";
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: Colors.textMuted }}>Error al cargar el perfil</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -51,11 +77,11 @@ export default function ProfileScreen() {
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             <Text style={styles.avatarLetter}>
-              {USER.name.charAt(0).toUpperCase()}
+              {data.name.charAt(0).toUpperCase()}
             </Text>
           </View>
-          <Text style={styles.name}>{USER.name}</Text>
-          <Text style={styles.email}>{USER.email}</Text>
+          <Text style={styles.name}>{data.name}</Text>
+          <Text style={styles.email}>{data.email}</Text>
         </View>
 
         {/* Mi aporte */}
@@ -95,7 +121,7 @@ export default function ProfileScreen() {
             <Ionicons name="person-outline" size={18} color={Colors.primary} />
             <View style={styles.infoText}>
               <Text style={styles.infoLabel}>Nombre</Text>
-              <Text style={styles.infoValue}>{USER.name}</Text>
+              <Text style={styles.infoValue}>{data.name}</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -103,7 +129,7 @@ export default function ProfileScreen() {
             <Ionicons name="mail-outline" size={18} color={Colors.primary} />
             <View style={styles.infoText}>
               <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{USER.email}</Text>
+              <Text style={styles.infoValue}>{data.email}</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -111,7 +137,7 @@ export default function ProfileScreen() {
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
             <View style={styles.infoText}>
               <Text style={styles.infoLabel}>Miembro desde</Text>
-              <Text style={styles.infoValue}>{USER.createdAt}</Text>
+              <Text style={styles.infoValue}>{formattedDate}</Text>
             </View>
           </View>
         </View>
@@ -133,7 +159,7 @@ export default function ProfileScreen() {
         <Button
           label="Cerrar sesión"
           variant="ghost"
-          onPress={() => router.replace("/")}
+          onPress={() => logout()}
         />
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -193,12 +219,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.background,
+  },
   scroll: {
     padding: 20,
     paddingTop: 24,
   },
-
-  // Avatar
   avatarSection: {
     alignItems: "center",
     marginBottom: 28,
@@ -227,8 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textMuted,
   },
-
-  // Section label
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
@@ -238,8 +266,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
-
-  // Aporte card
   aportCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -289,8 +315,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // Info card
   infoCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -322,8 +346,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.border,
   },
-
-  // Colaboradores
   collaboratorBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -341,8 +363,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.text,
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
