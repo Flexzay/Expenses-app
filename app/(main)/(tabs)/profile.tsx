@@ -1,10 +1,15 @@
 import { ProfileSkeleton } from "@/components/ui/skeleton";
-import { useLogout, useProfile } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
+import { useUpdateAmount } from "@/hooks/useAmount";
+import { useProfile } from "@/hooks/useAuth";
+import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,23 +20,54 @@ import {
 import { Button } from "../../../components/ui/Button";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-import { formatCOP } from "@/utils/currency";
 
 export default function ProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [amountInput, setAmountInput] = useState("");
+  const [amountInput, setAmountInput] = useState(""); // valor raw (solo números)
+  const [displayValue, setDisplayValue] = useState(""); // valor formateado para mostrar
 
   const { data, isLoading, isError } = useProfile();
-  const { mutate: logout } = useLogout();
+  const { mutate: updateAmount, isPending: isSaving } = useUpdateAmount();
+  const { logout } = useAuth();
 
   const myAmount = data?.monthly_amount ?? null;
+
+  const handleAmountChange = (text: string) => {
+    const raw = text.replace(/[^0-9]/g, ""); // solo dígitos
+    setAmountInput(raw);
+    setDisplayValue(raw ? formatCOP(parseFloat(raw)) : "");
+  };
+
+  const handleOpenModal = () => {
+    if (myAmount) {
+      setAmountInput(myAmount.toString());
+      setDisplayValue(formatCOP(myAmount));
+    } else {
+      setAmountInput("");
+      setDisplayValue("");
+    }
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setAmountInput("");
+    setDisplayValue("");
+  };
 
   const handleSave = () => {
     const parsed = parseFloat(amountInput);
     if (!isNaN(parsed) && parsed > 0) {
-      // TODO: PUT /api/profile/amount
-      setModalVisible(false);
-      setAmountInput("");
+      updateAmount(
+        { monthly_amount: parsed },
+        {
+          onSuccess: () => {
+            setModalVisible(false);
+            setAmountInput("");
+            setDisplayValue("");
+          },
+        },
+      );
     }
   };
 
@@ -90,7 +126,7 @@ export default function ProfileScreen() {
                   <Text style={styles.aportLabel}>Mi contribución mensual</Text>
                   {myAmount ? (
                     <Text style={styles.aportAmount}>
-                     {formatCOP(data.monthly_amount)}
+                      {formatCOP(myAmount)}
                     </Text>
                   ) : (
                     <Text style={styles.aportEmpty}>Sin definir</Text>
@@ -99,14 +135,7 @@ export default function ProfileScreen() {
               </View>
               <TouchableOpacity
                 style={styles.aportEditBtn}
-                onPress={
-                  myAmount
-                    ? () => {
-                        setAmountInput(myAmount.toString());
-                        setModalVisible(true);
-                      }
-                    : () => setModalVisible(true)
-                }
+                onPress={handleOpenModal}
               >
                 <Ionicons
                   name={myAmount ? "pencil-outline" : "add"}
@@ -116,7 +145,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Info */}
+            {/* Información */}
             <Text style={styles.sectionLabel}>Información</Text>
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
@@ -156,7 +185,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Colaboradores */}
+            {/* Equipo */}
             <Text style={styles.sectionLabel}>Equipo</Text>
             <TouchableOpacity
               style={styles.collaboratorBtn}
@@ -177,11 +206,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <View style={{ height: 24 }} />
-            <Button
-              label="Cerrar sesión"
-              variant="ghost"
-              onPress={() => logout()}
-            />
+            <Button label="Cerrar sesión" variant="ghost" onPress={logout} />
             <View style={{ height: 40 }} />
           </>
         )}
@@ -192,43 +217,83 @@ export default function ProfileScreen() {
         visible={modalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={handleCloseModal}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={handleCloseModal}
+          />
+
           <View style={styles.modalCard}>
+            {/* Handle bar */}
+            <View style={styles.handleBar} />
+
+            {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {myAmount ? "Editar mi aporte" : "Definir mi aporte"}
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={22} color={Colors.textMuted} />
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={handleCloseModal}
+              >
+                <Ionicons name="close" size={18} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
+
             <Text style={styles.modalSubtitle}>
               Define cuánto aportarás al presupuesto compartido este mes.
             </Text>
+
+            {/* Input */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Valor a aportar</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                placeholderTextColor={Colors.textMuted}
-                keyboardType="numeric"
-                value={amountInput}
-                onChangeText={setAmountInput}
-                autoFocus
-              />
+              <View
+                style={[
+                  styles.inputWrapper,
+                  isSaving && styles.inputWrapperDisabled,
+                ]}
+              >
+                <Text style={styles.inputPrefix}>$</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="numeric"
+                  value={displayValue}
+                  onChangeText={handleAmountChange}
+                  autoFocus
+                  editable={!isSaving}
+                />
+              </View>
             </View>
+
+            {/* Botones */}
             <View style={styles.modalActions}>
-              <Button
-                label="Cancelar"
-                variant="ghost"
-                onPress={() => setModalVisible(false)}
-              />
-              <Button label="Guardar" onPress={handleSave} />
+              <View style={styles.cancelBtn}>
+                <Button
+                  label="Cancelar"
+                  variant="ghost"
+                  onPress={handleCloseModal}
+                />
+              </View>
+              <View style={styles.saveBtn}>
+                <Button
+                  label={isSaving ? "Guardando..." : "Guardar"}
+                  onPress={handleSave}
+                  disabled={
+                    isSaving || !amountInput || parseFloat(amountInput) <= 0
+                  }
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -245,6 +310,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   errorText: { fontSize: 15, color: Colors.textMuted },
+
+  // Avatar
   avatarSection: { alignItems: "center", marginBottom: 28 },
   avatar: {
     width: 72,
@@ -263,6 +330,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   email: { fontSize: 14, color: Colors.textMuted },
+
+  // Secciones
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
@@ -272,6 +341,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
+
+  // Aporte
   aportCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -304,6 +375,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
+  // Info
   infoCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -322,6 +395,8 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
   infoValue: { fontSize: 15, fontWeight: "600", color: Colors.text },
   divider: { height: 1, backgroundColor: Colors.border },
+
+  // Colaboradores
   collaboratorBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,17 +414,28 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.text,
   },
-  modalOverlay: {
-    flex: 1,
+
+  // Modal
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
   },
   modalCard: {
     backgroundColor: Colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
+    paddingTop: 12,
     gap: 16,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center",
+    marginBottom: 8,
   },
   modalHeader: {
     flexDirection: "row",
@@ -357,24 +443,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalTitle: { fontSize: 18, fontWeight: "700", color: Colors.text },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalSubtitle: {
     fontSize: 14,
     color: Colors.textMuted,
     lineHeight: 20,
     marginTop: -8,
   },
-  field: { gap: 6 },
+  field: { gap: 8 },
   fieldLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1.5,
     borderColor: Colors.border,
     borderRadius: 14,
+    backgroundColor: Colors.background,
     paddingHorizontal: 16,
-    paddingVertical: 13,
-    fontSize: 20,
+  },
+  inputWrapperDisabled: { opacity: 0.5 },
+  inputPrefix: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.textMuted,
+    marginRight: 4,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 22,
     fontWeight: "700",
     color: Colors.text,
-    backgroundColor: Colors.background,
   },
-  modalActions: { flexDirection: "row", gap: 12 },
+  modalActions: { flexDirection: "row", gap: 12, marginTop: 4 },
+  cancelBtn: { flex: 1 },
+  saveBtn: { flex: 2 },
 });

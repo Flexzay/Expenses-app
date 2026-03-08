@@ -40,7 +40,7 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: profileService,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     retry: 1,
   });
 }

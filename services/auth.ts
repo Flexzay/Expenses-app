@@ -31,7 +31,7 @@ export async function loginService(payload: LoginPayload) {
 }
 
 export async function profileService() {
-  await new Promise((resolve) => setTimeout(resolve, 3000)); 
+  // await new Promise((resolve) => setTimeout(resolve, 3000)); 
   return request<any>("get", "/profile");
 }
 
