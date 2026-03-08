@@ -12,6 +12,7 @@ import {
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
 import { formatCOP } from "@/utils/currency";
+import { useCategories } from "@/hooks/useCategories";
 
 const SUMMARY = {
   totalSpent: 320000,
@@ -55,11 +56,7 @@ const RECENT_EXPENSES = [
   },
 ];
 
-const QUICK_STATS = [
-  { label: "Este mes", value: "4 gastos", icon: "receipt-outline" },
-  { label: "Categorías", value: "4 activas", icon: "grid-outline" },
-  { label: "Predicción", value: "$490.000", icon: "trending-up-outline" },
-];
+
 
 export default function HomeScreen() {
   const progressColor =
@@ -70,6 +67,13 @@ export default function HomeScreen() {
         : Colors.accent;
 
   const { data, isLoading } = useProfile();
+  const {data:categories} = useCategories()
+
+  const QUICK_STATS = [
+  { label: "Este mes", value: "4 gastos", icon: "receipt-outline" },
+  { label: "Categorías", value: `${categories?.length ?? 0} activas`, icon: "grid-outline" },
+  { label: "Predicción", value: "$490.000", icon: "trending-up-outline" },
+];
 
   return (
     <View style={styles.container}>
