@@ -9,6 +9,8 @@ export function useCreateExpense() {
     mutationFn: createExpenseService,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });
+
     },
     onError: () => {
       Alert.alert("Error", "No se pudo guardar el gasto.");
