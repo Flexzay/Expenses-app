@@ -1,6 +1,6 @@
 import { api, getToken } from "./api";
 
-type Method = "get" | "post" | "put" |  "delete";
+type Method = "get" | "post" | "put" | "patch" |"delete";
 
 type RequestConfig = {
   token?: string | null;
