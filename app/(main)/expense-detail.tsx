@@ -1,144 +1,148 @@
+import { useDeleteExpense } from "@/hooks/useDeleteExpenses";
+import { useExpense } from "@/hooks/useExpensesId";
+import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Header } from "../../components/ui/Header";
-import { Button } from "../../components/ui/Button";
 import { Colors } from "../../constants/colors";
 
-const ALL_EXPENSES = [
-  { id: "1", title: "Recarga gas",       amount: 45000, category: "Gas",             icon: "flame-outline",           date: "4 mar",  month: "Marzo",   description: "Recarga mensual del cilindro de gas." },
-  { id: "2", title: "Netflix",           amount: 17900, category: "Entretenimiento", icon: "game-controller-outline", date: "3 mar",  month: "Marzo",   description: "Suscripción mensual Netflix HD."      },
-  { id: "3", title: "Factura agua",      amount: 32000, category: "Agua",            icon: "water-outline",           date: "2 mar",  month: "Marzo",   description: ""                                     },
-  { id: "4", title: "Energía eléctrica", amount: 89000, category: "Energía",         icon: "flash-outline",           date: "1 mar",  month: "Marzo",   description: "Factura de energía mes de febrero."   },
-  { id: "5", title: "Spotify",           amount: 15900, category: "Entretenimiento", icon: "game-controller-outline", date: "28 feb", month: "Febrero", description: "Suscripción mensual Spotify."         },
-  { id: "6", title: "Agua febrero",      amount: 30000, category: "Agua",            icon: "water-outline",           date: "25 feb", month: "Febrero", description: ""                                     },
-  { id: "7", title: "Gas febrero",       amount: 42000, category: "Gas",             icon: "flame-outline",           date: "20 feb", month: "Febrero", description: ""                                     },
-  { id: "8", title: "Luz febrero",       amount: 76000, category: "Energía",         icon: "flash-outline",           date: "18 feb", month: "Febrero", description: ""                                     },
-];
-
-const CATEGORIES = [
-  { id: "1", name: "Gas",             icon: "flame-outline"           },
-  { id: "2", name: "Agua",            icon: "water-outline"           },
-  { id: "3", name: "Energía",         icon: "flash-outline"           },
-  { id: "4", name: "Entretenimiento", icon: "game-controller-outline" },
-  { id: "5", name: "Otros",           icon: "pricetag-outline"        },
-];
+function formatFullDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("es-CO", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export default function ExpenseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const expense = ALL_EXPENSES.find((e) => e.id === id);
-
-  const [editModal, setEditModal] = useState(false);
-  const [titleInput, setTitleInput] = useState(expense?.title ?? "");
-  const [amountInput, setAmountInput] = useState(expense?.amount.toString() ?? "");
-  const [descInput, setDescInput] = useState(expense?.description ?? "");
-  const [selectedCategory, setSelectedCategory] = useState(expense?.category ?? "");
-
-  if (!expense) {
-    return (
-      <View style={styles.container}>
-        <Header title="Detalle" showBack={true} />
-        <View style={styles.notFound}>
-          <Text style={styles.notFoundText}>Gasto no encontrado.</Text>
-        </View>
-      </View>
-    );
-  }
+  const { data: expense, isLoading, isError } = useExpense(Number(id));
+  const { mutate: deleteExpense, isPending: isDeleting } = useDeleteExpense();
 
   const handleDelete = () => {
-    Alert.alert(
-      "Eliminar gasto",
-      "¿Estás seguro de que quieres eliminar este gasto?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: () => {
-            // aquí irá la lógica de eliminar
-            router.back();
-          },
-        },
-      ]
-    );
-  };
-
-  const handleSave = () => {
-    // aquí irá la lógica de guardar edición
-    setEditModal(false);
+    Alert.alert("Eliminar gasto", `¿Eliminar "${expense?.title}"?`, [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: () =>
+          deleteExpense(Number(id), { onSuccess: () => router.back() }),
+      },
+    ]);
   };
 
   return (
     <View style={styles.container}>
       <Header title="Detalle del gasto" showBack={true} />
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
-        {/* Card principal */}
-        <View style={styles.mainCard}>
-          <View style={styles.iconWrap}>
-            <Ionicons name={expense.icon as any} size={36} color="#FFFFFF" />
-          </View>
-          <Text style={styles.mainAmount}>-${expense.amount.toLocaleString()}</Text>
-          <Text style={styles.mainTitle}>{expense.title}</Text>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>{expense.category}</Text>
-          </View>
+      {isLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
-
-        {/* Info detalle */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Fecha</Text>
-              <Text style={styles.infoValue}>{expense.date}</Text>
+      ) : isError || !expense ? (
+        <View style={styles.centered}>
+          <Ionicons
+            name="cloud-offline-outline"
+            size={40}
+            color={Colors.textMuted}
+          />
+          <Text style={styles.errorText}>No se pudo cargar el gasto</Text>
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+        >
+          {/* Hero amount */}
+          <View style={styles.heroCard}>
+            <View style={styles.heroIcon}>
+              <Ionicons name="pricetag-outline" size={32} color="#FFFFFF" />
             </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <Ionicons name="grid-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Categoría</Text>
-              <Text style={styles.infoValue}>{expense.category}</Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <Ionicons name="document-text-outline" size={18} color={Colors.primary} />
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Descripción</Text>
-              <Text style={styles.infoValue}>
-                {expense.description || "Sin descripción"}
+            <Text style={styles.heroAmount}>-{formatCOP(expense.amount)}</Text>
+            <Text style={styles.heroTitle}>{expense.title}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>
+                {expense.category?.name ?? "Sin categoría"}
               </Text>
             </View>
           </View>
-        </View>
 
-        {/* Acciones */}
-        <View style={styles.actions}>
+          {/* Detalles */}
+          <Text style={styles.sectionLabel}>Información</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Ionicons name="cash-outline" size={18} color={Colors.primary} />
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>Monto</Text>
+                <Text style={styles.infoValue}>
+                  {formatCOP(expense.amount)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color={Colors.primary}
+              />
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>Fecha</Text>
+                <Text style={styles.infoValue}>
+                  {formatFullDate(expense.expense_date)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Ionicons name="grid-outline" size={18} color={Colors.primary} />
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>Categoría</Text>
+                <Text style={styles.infoValue}>
+                  {expense.category?.name ?? "—"}
+                </Text>
+              </View>
+            </View>
+            {expense.description && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.infoRow}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={18}
+                    color={Colors.primary}
+                  />
+                  <View style={styles.infoText}>
+                    <Text style={styles.infoLabel}>Descripción</Text>
+                    <Text style={styles.infoValue}>{expense.description}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Acciones */}
           <TouchableOpacity
             style={styles.editBtn}
             activeOpacity={0.8}
-            onPress={() => setEditModal(true)}
+            onPress={() =>
+              router.push({
+                pathname: "/(main)/edit-expense",
+                params: { id: expense.id },
+              } as any)
+            }
           >
-            <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+            <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
             <Text style={styles.editBtnText}>Editar gasto</Text>
           </TouchableOpacity>
 
@@ -146,154 +150,72 @@ export default function ExpenseDetailScreen() {
             style={styles.deleteBtn}
             activeOpacity={0.8}
             onPress={handleDelete}
+            disabled={isDeleting}
           >
-            <Ionicons name="trash-outline" size={20} color={Colors.danger} />
-            <Text style={styles.deleteBtnText}>Eliminar gasto</Text>
+            <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+            <Text style={styles.deleteBtnText}>
+              {isDeleting ? "Eliminando..." : "Eliminar gasto"}
+            </Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      {/* Modal editar */}
-      <Modal
-        visible={editModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Editar gasto</Text>
-              <TouchableOpacity onPress={() => setEditModal(false)}>
-                <Ionicons name="close" size={22} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Título</Text>
-              <TextInput
-                style={styles.input}
-                value={titleInput}
-                onChangeText={setTitleInput}
-                placeholder="Nombre del gasto"
-                placeholderTextColor={Colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Monto</Text>
-              <TextInput
-                style={styles.input}
-                value={amountInput}
-                onChangeText={setAmountInput}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor={Colors.textMuted}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Categoría</Text>
-              <View style={styles.catGrid}>
-                {CATEGORIES.map((cat) => {
-                  const isSelected = selectedCategory === cat.name;
-                  return (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[styles.catItem, isSelected && styles.catItemSelected]}
-                      onPress={() => setSelectedCategory(cat.name)}
-                    >
-                      <Ionicons
-                        name={cat.icon as any}
-                        size={16}
-                        color={isSelected ? "#FFFFFF" : Colors.primary}
-                      />
-                      <Text style={[styles.catItemText, isSelected && styles.catItemTextSelected]}>
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Descripción</Text>
-              <TextInput
-                style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-                value={descInput}
-                onChangeText={setDescInput}
-                placeholder="Opcional"
-                placeholderTextColor={Colors.textMuted}
-                multiline
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <Button label="Cancelar" variant="ghost" onPress={() => setEditModal(false)} />
-              <Button label="Guardar" onPress={handleSave} />
-            </View>
-          </View>
-        </View>
-      </Modal>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { padding: 20, paddingTop: 8 },
+  centered: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    padding: 20,
-    paddingTop: 16,
-  },
-
-  // Main card
-  mainCard: {
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    padding: 24,
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
-    gap: 8,
+    gap: 12,
   },
-  iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  errorText: { fontSize: 15, color: Colors.textMuted },
+
+  heroCard: {
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 24,
+  },
+  heroIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 4,
   },
-  mainAmount: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  mainTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.9)",
+  heroAmount: { fontSize: 36, fontWeight: "800", color: "#FFFFFF" },
+  heroTitle: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.85)",
+    fontWeight: "500",
   },
   categoryBadge: {
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 6,
+    borderRadius: 999,
     marginTop: 4,
   },
-  categoryBadgeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
+  categoryBadgeText: { color: "#FFFFFF", fontSize: 13, fontWeight: "600" },
 
-  // Info card
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
   infoCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -308,144 +230,35 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
-  infoText: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-  },
+  infoText: { flex: 1 },
+  infoLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
+  infoValue: { fontSize: 15, fontWeight: "600", color: Colors.text },
+  infoValueCapitalize: { textTransform: "capitalize" },
+  divider: { height: 1, backgroundColor: Colors.border },
 
-  // Acciones
-  actions: {
-    gap: 12,
-  },
   editBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: Colors.card,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
-  editBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
+  editBtnText: { fontSize: 15, fontWeight: "600", color: Colors.primary },
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    gap: 10,
     backgroundColor: Colors.card,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.danger,
-    paddingVertical: 14,
-  },
-  deleteBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.danger,
-  },
-
-  // Not found
-  notFound: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notFoundText: {
-    color: Colors.textMuted,
-    fontSize: 16,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 14,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  field: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.danger + "40",
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: Colors.text,
-    backgroundColor: Colors.background,
   },
-  catGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  catItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  catItemSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  catItemText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textMuted,
-  },
-  catItemTextSelected: {
-    color: "#FFFFFF",
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 4,
-  },
+  deleteBtnText: { fontSize: 15, fontWeight: "600", color: Colors.danger },
 });

@@ -1,5 +1,8 @@
 import { HomeSkeleton } from "@/components/ui/skeleton";
 import { useProfile } from "@/hooks/useAuth";
+import { useCategories } from "@/hooks/useCategories";
+import { useExpenses } from "@/hooks/useExpenses";
+import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import {
@@ -11,69 +14,63 @@ import {
 } from "react-native";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-import { formatCOP } from "@/utils/currency";
-import { useCategories } from "@/hooks/useCategories";
 
-const SUMMARY = {
-  totalSpent: 320000,
-  budget: 500000,
-  remaining: 180000,
-  percentUsed: 64,
-};
-
-const RECENT_EXPENSES = [
-  {
-    id: "1",
-    title: "Recarga gas",
-    amount: 45000,
-    category: "Gas",
-    icon: "flame-outline",
-    date: "Hoy",
-  },
-  {
-    id: "2",
-    title: "Netflix",
-    amount: 17900,
-    category: "Entretenimiento",
-    icon: "game-controller-outline",
-    date: "Ayer",
-  },
-  {
-    id: "3",
-    title: "Factura agua",
-    amount: 32000,
-    category: "Agua",
-    icon: "water-outline",
-    date: "2 mar",
-  },
-  {
-    id: "4",
-    title: "Energía eléctrica",
-    amount: 89000,
-    category: "Energía",
-    icon: "flash-outline",
-    date: "1 mar",
-  },
-];
-
-
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Hoy";
+  if (date.toDateString() === yesterday.toDateString()) return "Ayer";
+  return date.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+}
 
 export default function HomeScreen() {
+  const { data, isLoading } = useProfile();
+  const { data: categories } = useCategories();
+  const { data: expenses } = useExpenses();
+
+  // Calcular totales del mes actual
+  const now = new Date();
+  const monthExpenses =
+    expenses?.filter((e) => {
+      const d = new Date(e.expense_date);
+      return (
+        d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      );
+    }) ?? [];
+
+  const totalSpent = monthExpenses.reduce((acc, e) => acc + e.amount, 0);
+  const budget = data?.monthly_amount ?? 0;
+  const remaining = Math.max(budget - totalSpent, 0);
+  const percentUsed = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
+
   const progressColor =
-    SUMMARY.percentUsed >= 90
+    percentUsed >= 90
       ? Colors.danger
-      : SUMMARY.percentUsed >= 70
+      : percentUsed >= 70
         ? "#F59E0B"
         : Colors.accent;
 
-  const { data, isLoading } = useProfile();
-  const {data:categories} = useCategories()
+  const recentExpenses = expenses?.slice(0, 4) ?? [];
 
   const QUICK_STATS = [
-  { label: "Este mes", value: "4 gastos", icon: "receipt-outline" },
-  { label: "Categorías", value: `${categories?.length ?? 0} activas`, icon: "grid-outline" },
-  { label: "Predicción", value: "$490.000", icon: "trending-up-outline" },
-];
+    {
+      label: "Este mes",
+      value: `${monthExpenses.length} gastos`,
+      icon: "receipt-outline",
+    },
+    {
+      label: "Categorías",
+      value: `${categories?.length ?? 0} activas`,
+      icon: "grid-outline",
+    },
+    {
+      label: "Disponible",
+      value: budget > 0 ? formatCOP(remaining) : "—",
+      icon: "wallet-outline",
+    },
+  ];
 
   return (
     <View style={styles.container}>
@@ -104,19 +101,19 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {/* Card principal presupuesto */}
+            {/* Card presupuesto */}
             <View style={styles.budgetCard}>
               <View style={styles.budgetRow}>
                 <View>
                   <Text style={styles.budgetLabel}>Gastado este mes</Text>
                   <Text style={styles.budgetAmount}>
-                    ${SUMMARY.totalSpent.toLocaleString()}
+                    {formatCOP(totalSpent)}
                   </Text>
                 </View>
                 <View style={styles.remainingBadge}>
                   <Text style={styles.remainingLabel}>Disponible</Text>
                   <Text style={styles.remainingAmount}>
-                    ${SUMMARY.remaining.toLocaleString()}
+                    {formatCOP(remaining)}
                   </Text>
                 </View>
               </View>
@@ -125,18 +122,16 @@ export default function HomeScreen() {
                   style={[
                     styles.progressFill,
                     {
-                      width: `${Math.min(SUMMARY.percentUsed, 100)}%`,
+                      width: `${Math.min(percentUsed, 100)}%`,
                       backgroundColor: progressColor,
                     },
                   ]}
                 />
               </View>
               <View style={styles.progressLabels}>
-                <Text style={styles.progressPct}>
-                  {SUMMARY.percentUsed}% usado
-                </Text>
+                <Text style={styles.progressPct}>{percentUsed}% usado</Text>
                 <Text style={styles.progressBudget}>
-                  Presupuesto: {formatCOP(data.monthly_amount)}
+                  Presupuesto: {budget > 0 ? formatCOP(budget) : "Sin definir"}
                 </Text>
               </View>
             </View>
@@ -166,37 +161,52 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {RECENT_EXPENSES.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.expenseRow}
-                activeOpacity={0.7}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(main)/expense-detail",
-                    params: { id: item.id },
-                  } as any)
-                }
-              >
-                <View style={styles.expenseIcon}>
-                  <Ionicons
-                    name={item.icon as any}
-                    size={20}
-                    color={Colors.primary}
-                  />
-                </View>
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseTitle}>{item.title}</Text>
-                  <Text style={styles.expenseCategory}>{item.category}</Text>
-                </View>
-                <View style={styles.expenseRight}>
-                  <Text style={styles.expenseAmount}>
-                    -${item.amount.toLocaleString()}
-                  </Text>
-                  <Text style={styles.expenseDate}>{item.date}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {recentExpenses.length === 0 ? (
+              <View style={styles.emptyExpenses}>
+                <Ionicons
+                  name="receipt-outline"
+                  size={36}
+                  color={Colors.border}
+                />
+                <Text style={styles.emptyText}>No hay gastos este mes</Text>
+              </View>
+            ) : (
+              recentExpenses.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.expenseRow}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(main)/expense-detail",
+                      params: { id: item.id },
+                    } as any)
+                  }
+                >
+                  <View style={styles.expenseIcon}>
+                    <Ionicons
+                      name="pricetag-outline"
+                      size={20}
+                      color={Colors.primary}
+                    />
+                  </View>
+                  <View style={styles.expenseInfo}>
+                    <Text style={styles.expenseTitle}>{item.title}</Text>
+                    <Text style={styles.expenseCategory}>
+                      {item.category?.name ?? "Sin categoría"}
+                    </Text>
+                  </View>
+                  <View style={styles.expenseRight}>
+                    <Text style={styles.expenseAmount}>
+                      -{formatCOP(item.amount)}
+                    </Text>
+                    <Text style={styles.expenseDate}>
+                      {formatDate(item.expense_date)}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
 
             <View style={{ height: 100 }} />
           </>
@@ -297,6 +307,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: Colors.text },
   sectionLink: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
+  emptyExpenses: { alignItems: "center", gap: 8, paddingVertical: 32 },
+  emptyText: { fontSize: 14, color: Colors.textMuted },
   expenseRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -349,3 +361,4 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
+

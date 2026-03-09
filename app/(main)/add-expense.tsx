@@ -1,4 +1,5 @@
 import { useCategories } from "@/hooks/useCategories";
+import { useCreateExpense } from "@/hooks/useCreateExpense";
 import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
@@ -19,13 +20,17 @@ import { Colors } from "../../constants/colors";
 export default function AddExpenseScreen() {
   const [amount, setAmount] = useState("");
   const [displayAmount, setDisplayAmount] = useState("");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState("Hoy");
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<"Hoy" | "Ayer" | "Otro">(
+    "Hoy",
+  );
 
   const { data: categories, isLoading: loadingCategories } = useCategories();
+  const { mutate: createExpense, isPending } = useCreateExpense();
 
-  const DATE_OPTIONS = ["Hoy", "Ayer", "Otro"];
+  const DATE_OPTIONS: ("Hoy" | "Ayer" | "Otro")[] = ["Hoy", "Ayer", "Otro"];
 
   const handleAmountChange = (text: string) => {
     const raw = text.replace(/[^0-9]/g, "");
@@ -33,13 +38,33 @@ export default function AddExpenseScreen() {
     setDisplayAmount(raw ? formatCOP(parseFloat(raw)) : "");
   };
 
-  const handleSave = () => {
-    if (!amount || !selectedCategory) return;
-    console.log({ amount, description, selectedCategory, selectedDate });
-    router.back();
+  const getExpenseDate = (): string => {
+    const today = new Date();
+    if (selectedDate === "Hoy") return today.toISOString().split("T")[0];
+    if (selectedDate === "Ayer") {
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      return yesterday.toISOString().split("T")[0];
+    }
+    return today.toISOString().split("T")[0];
   };
 
-  const isValid = amount.length > 0 && selectedCategory !== null;
+  const handleSave = () => {
+    if (!amount || !selectedCategory || !title.trim()) return;
+    createExpense(
+      {
+        category_id: selectedCategory,
+        title: title.trim(),
+        amount: parseFloat(amount),
+        description: description.trim() || undefined,
+        expense_date: getExpenseDate(),
+      },
+      { onSuccess: () => router.back() },
+    );
+  };
+
+  const isValid =
+    amount.length > 0 && selectedCategory !== null && title.trim().length > 0;
 
   return (
     <View style={styles.container}>
@@ -66,9 +91,20 @@ export default function AddExpenseScreen() {
 
         <View style={styles.divider} />
 
+        {/* Título */}
+        <Text style={styles.sectionTitle}>Título</Text>
+        <TextInput
+          style={styles.titleInput}
+          placeholder="Ej: Recarga gas, Mercado..."
+          placeholderTextColor={Colors.textMuted}
+          value={title}
+          onChangeText={setTitle}
+        />
+
+        <View style={styles.divider} />
+
         {/* Categoría */}
         <Text style={styles.sectionTitle}>Categoría</Text>
-
         {loadingCategories ? (
           <View style={styles.loadingCategories}>
             <ActivityIndicator size="small" color={Colors.primary} />
@@ -90,7 +126,7 @@ export default function AddExpenseScreen() {
         ) : (
           <View style={styles.categoriesGrid}>
             {categories?.map((cat) => {
-              const isSelected = selectedCategory === cat.id.toString();
+              const isSelected = selectedCategory === cat.id;
               return (
                 <TouchableOpacity
                   key={cat.id}
@@ -98,7 +134,7 @@ export default function AddExpenseScreen() {
                     styles.categoryItem,
                     isSelected && styles.categoryItemSelected,
                   ]}
-                  onPress={() => setSelectedCategory(cat.id.toString())}
+                  onPress={() => setSelectedCategory(cat.id)}
                   activeOpacity={0.7}
                 >
                   <View
@@ -130,10 +166,12 @@ export default function AddExpenseScreen() {
         <View style={styles.divider} />
 
         {/* Descripción */}
-        <Text style={styles.sectionTitle}>Descripción</Text>
+        <Text style={styles.sectionTitle}>
+          Descripción <Text style={styles.optional}>(opcional)</Text>
+        </Text>
         <TextInput
           style={styles.descInput}
-          placeholder="¿En qué gastaste? (opcional)"
+          placeholder="¿Algún detalle adicional?"
           placeholderTextColor={Colors.textMuted}
           value={description}
           onChangeText={setDescription}
@@ -170,9 +208,9 @@ export default function AddExpenseScreen() {
         <View style={{ height: 32 }} />
 
         <Button
-          label="Guardar gasto"
+          label={isPending ? "Guardando..." : "Guardar gasto"}
           onPress={handleSave}
-          disabled={!isValid}
+          disabled={!isValid || isPending}
         />
 
         <View style={{ height: 40 }} />
@@ -184,8 +222,6 @@ export default function AddExpenseScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { padding: 24, paddingTop: 8 },
-
-  // Monto
   amountSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -193,7 +229,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 8,
   },
-
   amountInput: {
     fontSize: 64,
     fontWeight: "800",
@@ -207,7 +242,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginBottom: 28,
   },
-
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 20 },
   sectionTitle: {
     fontSize: 15,
@@ -215,8 +249,17 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 14,
   },
-
-  // Categorías
+  optional: { fontSize: 13, fontWeight: "400", color: Colors.textMuted },
+  titleInput: {
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: Colors.text,
+    backgroundColor: Colors.card,
+  },
   loadingCategories: {
     height: 80,
     justifyContent: "center",
@@ -265,8 +308,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   categoryNameSelected: { color: Colors.primary },
-
-  // Descripción
   descInput: {
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -278,8 +319,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     textAlignVertical: "top",
   },
-
-  // Fecha
   dateRow: { flexDirection: "row", gap: 10 },
   dateChip: {
     paddingHorizontal: 20,
