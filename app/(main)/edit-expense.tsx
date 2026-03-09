@@ -1,8 +1,9 @@
 import { useCategories } from "@/hooks/useCategories";
 import { formatCOP } from "@/utils/currency";
+import { useMonthlyLimit } from "@/hooks/useMonthlyLimit";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState} from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -26,6 +27,7 @@ export default function EditExpenseScreen() {
   const { data: expense, isLoading, isError } = useExpense(Number(id));
   const { mutate: updateExpense, isPending } = useUpdateExpense(Number(id));
   const { data: categories, isLoading: loadingCategories } = useCategories();
+  const { monthlyLimit, spentThisMonth, remaining } = useMonthlyLimit();
 
   const [amount, setAmount] = useState("");
   const [displayAmount, setDisplayAmount] = useState("");
@@ -47,6 +49,13 @@ export default function EditExpenseScreen() {
     }
   }, [expense]);
 
+
+  const oldAmount = expense?.amount ?? 0;
+  const newAmount = parseFloat(amount || '0');
+  const projectedSpent = spentThisMonth + newAmount - oldAmount;
+  const willExceed = projectedSpent > monthlyLimit && monthlyLimit > 0;
+  const remainingFormatted = formatCOP(remaining);
+
   const handleAmountChange = (text: string) => {
     const raw = text.replace(/[^0-9]/g, "");
     setAmount(raw);
@@ -54,12 +63,12 @@ export default function EditExpenseScreen() {
   };
 
   const handleSave = () => {
-    if (!amount || !selectedCategory || !title.trim()) return;
+    if (!amount || !selectedCategory || !title.trim() || willExceed) return;
     updateExpense(
       {
         category_id: selectedCategory,
         title: title.trim(),
-        amount: parseFloat(amount),
+        amount: newAmount,
         description: description.trim() || undefined,
         expense_date: expenseDate,
       },
@@ -67,7 +76,7 @@ export default function EditExpenseScreen() {
     );
   };
 
-  const isValid = amount.length > 0 && selectedCategory !== null && title.trim().length > 0;
+  const isValid = amount.length > 0 && selectedCategory !== null && title.trim().length > 0 && !willExceed;
 
   return (
     <>
@@ -109,6 +118,29 @@ export default function EditExpenseScreen() {
                   />
                 </View>
                 <Text style={styles.amountLabel}>Edita el monto del gasto</Text>
+
+               
+                {monthlyLimit > 0 && (
+                  <View style={styles.limitInfo}>
+                    <Text style={styles.limitText}>
+                      Límite mensual: <Text style={styles.limitAmount}>{formatCOP(monthlyLimit)}</Text>
+                    </Text>
+                    <Text style={[
+                      styles.remainingText, 
+                      { color: remaining < monthlyLimit * 0.2 ? Colors.danger : Colors.primary }
+                    ]}>
+                      Restante: {remainingFormatted}
+                    </Text>
+                  </View>
+                )}
+                {willExceed && (
+                  <View style={styles.warning}>
+                    <Ionicons name="alert-circle-outline" size={20} color={Colors.danger} />
+                    <Text style={styles.warningText}>
+                      Excederá el límite mensual (solo {remainingFormatted} restante)
+                    </Text>
+                  </View>
+                )}
 
                 <View style={styles.divider} />
 
@@ -188,7 +220,7 @@ export default function EditExpenseScreen() {
 
                 <View style={styles.divider} />
 
-                {/* Fecha actual */}
+                {/* Fecha */}
                 <Text style={styles.sectionTitle}>Fecha</Text>
                 <View style={styles.dateDisplay}>
                   <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
@@ -231,7 +263,7 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 24,
     paddingTop: 8,
-    paddingBottom: 100, // Espacio extra para botón
+    paddingBottom: 100,
   },
   centered: {
     flexGrow: 1,
@@ -262,7 +294,46 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 13,
     color: Colors.textMuted,
-    marginBottom: 28,
+    marginBottom: 16,
+  },
+
+  limitInfo: {
+    backgroundColor: Colors.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+  },
+  limitText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  limitAmount: {
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  remainingText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginBottom: 16,
+  },
+  warningText: {
+    fontSize: 15,
+    color: '#dc2626',
+    fontWeight: '600',
+    flex: 1,
   },
 
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 20 },
@@ -273,7 +344,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   optional: { fontSize: 13, fontWeight: "400", color: Colors.textMuted },
-
   titleInput: {
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -284,7 +354,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     backgroundColor: Colors.card,
   },
-
   loadingCategories: {
     height: 80,
     justifyContent: "center",
@@ -321,7 +390,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   categoryNameSelected: { color: Colors.primary },
-
   descInput: {
     borderWidth: 1.5,
     borderColor: Colors.border,
@@ -333,7 +401,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     textAlignVertical: "top",
   },
-
   dateDisplay: {
     flexDirection: "row",
     alignItems: "center",
@@ -352,7 +419,6 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
     flex: 1,
   },
-
   actions: { flexDirection: "row", gap: 12, marginTop: 20 },
   cancelBtn: { flex: 1 },
   saveBtn: { flex: 2 },

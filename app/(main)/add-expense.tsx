@@ -1,6 +1,7 @@
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateExpense } from "@/hooks/useCreateExpense";
 import { formatCOP } from "@/utils/currency";
+import { useMonthlyLimit } from "@/hooks/useMonthlyLimit";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -30,8 +31,15 @@ export default function AddExpenseScreen() {
 
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const { mutate: createExpense, isPending } = useCreateExpense();
+  const { monthlyLimit, spentThisMonth, remaining } = useMonthlyLimit();
 
   const DATE_OPTIONS: ("Hoy" | "Ayer" | "Otro")[] = ["Hoy", "Ayer", "Otro"];
+
+  
+  const newAmount = parseFloat(amount || '0');
+  const projectedSpent = spentThisMonth + newAmount;
+  const willExceed = projectedSpent > monthlyLimit && monthlyLimit > 0;
+  const remainingFormatted = formatCOP(remaining);
 
   const handleAmountChange = (text: string) => {
     const raw = text.replace(/[^0-9]/g, "");
@@ -51,12 +59,12 @@ export default function AddExpenseScreen() {
   };
 
   const handleSave = () => {
-    if (!amount || !selectedCategory || !title.trim()) return;
+    if (!amount || !selectedCategory || !title.trim() || willExceed) return;
     createExpense(
       {
         category_id: selectedCategory,
         title: title.trim(),
-        amount: parseFloat(amount),
+        amount: newAmount,
         description: description.trim() || undefined,
         expense_date: getExpenseDate(),
       },
@@ -64,7 +72,8 @@ export default function AddExpenseScreen() {
     );
   };
 
-  const isValid = amount.length > 0 && selectedCategory !== null && title.trim().length > 0;
+ 
+  const isValid = amount.length > 0 && selectedCategory !== null && title.trim().length > 0 && !willExceed;
 
   return (
     <>
@@ -95,6 +104,31 @@ export default function AddExpenseScreen() {
               />
             </View>
             <Text style={styles.amountLabel}>Ingresa el monto del gasto</Text>
+
+           
+            {monthlyLimit > 0 && (
+              <View style={styles.limitInfo}>
+                <Text style={styles.limitText}>
+                  Límite mensual: <Text style={styles.limitAmount}>{formatCOP(monthlyLimit)}</Text>
+                </Text>
+                <Text style={[
+                  styles.remainingText, 
+                  { color: remaining < monthlyLimit * 0.2 ? Colors.danger : Colors.primary }
+                ]}>
+                  Restante: {remainingFormatted}
+                </Text>
+              </View>
+            )}
+
+            {/* ← NUEVO: Advertencia si excede */}
+            {willExceed && (
+              <View style={styles.warning}>
+                <Ionicons name="alert-circle-outline" size={20} color={Colors.danger} />
+                <Text style={styles.warningText}>
+                  Excederá el límite mensual (solo {remainingFormatted} restante)
+                </Text>
+              </View>
+            )}
 
             <View style={styles.divider} />
 
@@ -250,8 +284,48 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 13,
     color: Colors.textMuted,
-    marginBottom: 28,
+    marginBottom: 16,
   },
+
+  limitInfo: {
+    backgroundColor: Colors.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
+  },
+  limitText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 4,
+  },
+  limitAmount: {
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  remainingText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginBottom: 16,
+  },
+  warningText: {
+    fontSize: 15,
+    color: '#dc2626',
+    fontWeight: '600',
+    flex: 1,
+  },
+
   divider: { height: 1, backgroundColor: Colors.border, marginVertical: 20 },
   sectionTitle: {
     fontSize: 15,
