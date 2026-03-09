@@ -8,6 +8,7 @@ export default function MainLayout() {
       <Stack.Screen name="add-expense" />
       <Stack.Screen name="expenses" />
       <Stack.Screen name="expense-detail" />
+      <Stack.Screen name="edit-expense" />
     </Stack>
   );
 }
