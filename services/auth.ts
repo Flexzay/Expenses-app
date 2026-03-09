@@ -18,6 +18,18 @@ type AuthResponse = {
   user?: any;
 };
 
+export type Profile = {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at?: string;
+  monthly_amount: number;
+  collaborators_total: number; 
+  total_budget: number;       
+  created_at: string;
+  updated_at: string;
+};
+
 export async function registerService(payload: RegisterPayload) {
   const data = await request<AuthResponse>("post", "/register", payload);
   await setToken(data.token);
@@ -31,8 +43,7 @@ export async function loginService(payload: LoginPayload) {
 }
 
 export async function profileService() {
-  // await new Promise((resolve) => setTimeout(resolve, 3000)); 
-  return request<any>("get", "/profile");
+  return request<Profile>("get", "/profile");
 }
 
 export async function logoutService() {

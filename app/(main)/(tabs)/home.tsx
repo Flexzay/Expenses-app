@@ -30,7 +30,7 @@ export default function HomeScreen() {
   const { data: categories } = useCategories();
   const { data: expenses } = useExpenses();
 
-  // Calcular totales del mes actual
+  // Gastos del mes actual
   const now = new Date();
   const monthExpenses =
     expenses?.filter((e) => {
@@ -41,7 +41,9 @@ export default function HomeScreen() {
     }) ?? [];
 
   const totalSpent = monthExpenses.reduce((acc, e) => acc + e.amount, 0);
-  const budget = data?.monthly_amount ?? 0;
+
+  // Presupuesto total viene directo del backend
+  const budget = data?.total_budget ?? 0;
   const remaining = Math.max(budget - totalSpent, 0);
   const percentUsed = budget > 0 ? Math.round((totalSpent / budget) * 100) : 0;
 
@@ -131,7 +133,8 @@ export default function HomeScreen() {
               <View style={styles.progressLabels}>
                 <Text style={styles.progressPct}>{percentUsed}% usado</Text>
                 <Text style={styles.progressBudget}>
-                  Presupuesto: {budget > 0 ? formatCOP(budget) : "Sin definir"}
+                  Presupuesto total:{" "}
+                  {budget > 0 ? formatCOP(budget) : "Sin definir"}
                 </Text>
               </View>
             </View>
@@ -361,4 +364,3 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 });
-

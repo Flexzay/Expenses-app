@@ -23,17 +23,20 @@ import { Colors } from "../../../constants/colors";
 
 export default function ProfileScreen() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [amountInput, setAmountInput] = useState(""); // valor raw (solo números)
-  const [displayValue, setDisplayValue] = useState(""); // valor formateado para mostrar
+  const [amountInput, setAmountInput] = useState("");
+  const [displayValue, setDisplayValue] = useState("");
 
   const { data, isLoading, isError } = useProfile();
   const { mutate: updateAmount, isPending: isSaving } = useUpdateAmount();
   const { logout } = useAuth();
 
-  const myAmount = data?.monthly_amount ?? null;
+  // Datos del backend directamente
+  const myAmount = data?.monthly_amount ?? 0;
+  const collaboratorsTotal = data?.collaborators_total ?? 0;
+  const totalBudget = data?.total_budget ?? 0;
 
   const handleAmountChange = (text: string) => {
-    const raw = text.replace(/[^0-9]/g, ""); // solo dígitos
+    const raw = text.replace(/[^0-9]/g, "");
     setAmountInput(raw);
     setDisplayValue(raw ? formatCOP(parseFloat(raw)) : "");
   };
@@ -111,38 +114,67 @@ export default function ProfileScreen() {
               <Text style={styles.email}>{data.email}</Text>
             </View>
 
-            {/* Mi aporte */}
-            <Text style={styles.sectionLabel}>Mi aporte</Text>
-            <View style={styles.aportCard}>
-              <View style={styles.aportLeft}>
-                <View style={styles.aportIconWrap}>
+            {/* Presupuesto mensual */}
+            <Text style={styles.sectionLabel}>Presupuesto mensual</Text>
+            <View style={styles.budgetCard}>
+              {/* Mi aporte */}
+              <View style={styles.budgetRow}>
+                <View style={styles.budgetIconWrap}>
                   <Ionicons
                     name="wallet-outline"
-                    size={20}
+                    size={18}
                     color={Colors.primary}
                   />
                 </View>
-                <View>
-                  <Text style={styles.aportLabel}>Mi contribución mensual</Text>
-                  {myAmount ? (
-                    <Text style={styles.aportAmount}>
+                <View style={styles.budgetInfo}>
+                  <Text style={styles.budgetLabel}>Mi aporte</Text>
+                  {myAmount > 0 ? (
+                    <Text style={styles.budgetAmount}>
                       {formatCOP(myAmount)}
                     </Text>
                   ) : (
-                    <Text style={styles.aportEmpty}>Sin definir</Text>
+                    <Text style={styles.budgetEmpty}>Sin definir</Text>
                   )}
                 </View>
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={handleOpenModal}
+                >
+                  <Ionicons
+                    name={myAmount > 0 ? "pencil-outline" : "add"}
+                    size={17}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.aportEditBtn}
-                onPress={handleOpenModal}
-              >
-                <Ionicons
-                  name={myAmount ? "pencil-outline" : "add"}
-                  size={18}
-                  color={Colors.primary}
-                />
-              </TouchableOpacity>
+
+              {/* Aporte colaboradores — solo si existe */}
+              {collaboratorsTotal > 0 && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.budgetRow}>
+                    <View style={styles.budgetIconWrap}>
+                      <Ionicons
+                        name="people-outline"
+                        size={18}
+                        color={Colors.primary}
+                      />
+                    </View>
+                    <View style={styles.budgetInfo}>
+                      <Text style={styles.budgetLabel}>Colaboradores</Text>
+                      <Text style={styles.budgetAmount}>
+                        {formatCOP(collaboratorsTotal)}
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* Total */}
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total disponible</Text>
+                <Text style={styles.totalAmount}>{formatCOP(totalBudget)}</Text>
+              </View>
             </View>
 
             {/* Información */}
@@ -159,7 +191,7 @@ export default function ProfileScreen() {
                   <Text style={styles.infoValue}>{data.name}</Text>
                 </View>
               </View>
-              <View style={styles.divider} />
+              <View style={styles.rowDivider} />
               <View style={styles.infoRow}>
                 <Ionicons
                   name="mail-outline"
@@ -171,7 +203,7 @@ export default function ProfileScreen() {
                   <Text style={styles.infoValue}>{data.email}</Text>
                 </View>
               </View>
-              <View style={styles.divider} />
+              <View style={styles.rowDivider} />
               <View style={styles.infoRow}>
                 <Ionicons
                   name="calendar-outline"
@@ -197,7 +229,14 @@ export default function ProfileScreen() {
                 size={20}
                 color={Colors.primary}
               />
-              <Text style={styles.collaboratorText}>Colaboradores</Text>
+              <View style={styles.collaboratorInfo}>
+                <Text style={styles.collaboratorText}>Colaboradores</Text>
+                {collaboratorsTotal > 0 && (
+                  <Text style={styles.collaboratorSub}>
+                    {formatCOP(collaboratorsTotal)} aportados
+                  </Text>
+                )}
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={18}
@@ -228,15 +267,11 @@ export default function ProfileScreen() {
             activeOpacity={1}
             onPress={handleCloseModal}
           />
-
           <View style={styles.modalCard}>
-            {/* Handle bar */}
             <View style={styles.handleBar} />
-
-            {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {myAmount ? "Editar mi aporte" : "Definir mi aporte"}
+                {myAmount > 0 ? "Editar mi aporte" : "Definir mi aporte"}
               </Text>
               <TouchableOpacity
                 style={styles.closeBtn}
@@ -245,12 +280,9 @@ export default function ProfileScreen() {
                 <Ionicons name="close" size={18} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-
             <Text style={styles.modalSubtitle}>
               Define cuánto aportarás al presupuesto compartido este mes.
             </Text>
-
-            {/* Input */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Valor a aportar</Text>
               <View
@@ -259,6 +291,7 @@ export default function ProfileScreen() {
                   isSaving && styles.inputWrapperDisabled,
                 ]}
               >
+                <Text style={styles.inputPrefix}>$</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
@@ -271,8 +304,6 @@ export default function ProfileScreen() {
                 />
               </View>
             </View>
-
-            {/* Botones */}
             <View style={styles.modalActions}>
               <View style={styles.cancelBtn}>
                 <Button
@@ -309,8 +340,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   errorText: { fontSize: 15, color: Colors.textMuted },
-
-  // Avatar
   avatarSection: { alignItems: "center", marginBottom: 28 },
   avatar: {
     width: 72,
@@ -329,8 +358,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   email: { fontSize: 14, color: Colors.textMuted },
-
-  // Secciones
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
@@ -340,42 +367,59 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
-
-  // Aporte
-  aportCard: {
-    flexDirection: "row",
-    alignItems: "center",
+  budgetCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: 16,
+    paddingHorizontal: 16,
     marginBottom: 20,
   },
-  aportLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12 },
-  aportIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+  budgetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 12,
+  },
+  budgetIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: Colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
-  aportLabel: { fontSize: 13, color: Colors.textMuted, marginBottom: 2 },
-  aportAmount: { fontSize: 20, fontWeight: "800", color: Colors.primary },
-  aportEmpty: { fontSize: 15, fontWeight: "600", color: Colors.textMuted },
-  aportEditBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+  budgetInfo: { flex: 1 },
+  budgetLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
+  budgetAmount: { fontSize: 17, fontWeight: "700", color: Colors.text },
+  budgetEmpty: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
+  editBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // Info
+  divider: { height: 1, backgroundColor: Colors.border },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  totalLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  totalAmount: { fontSize: 20, fontWeight: "800", color: Colors.primary },
   infoCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
@@ -393,9 +437,7 @@ const styles = StyleSheet.create({
   infoText: { flex: 1 },
   infoLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
   infoValue: { fontSize: 15, fontWeight: "600", color: Colors.text },
-  divider: { height: 1, backgroundColor: Colors.border },
-
-  // Colaboradores
+  rowDivider: { height: 1, backgroundColor: Colors.border },
   collaboratorBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -403,18 +445,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 12,
   },
-  collaboratorText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-
-  // Modal
+  collaboratorInfo: { flex: 1 },
+  collaboratorText: { fontSize: 15, fontWeight: "600", color: Colors.text },
+  collaboratorSub: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
