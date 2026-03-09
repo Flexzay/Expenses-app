@@ -6,11 +6,14 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Button } from "../../components/ui/Button";
@@ -23,9 +26,7 @@ export default function AddExpenseScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [selectedDate, setSelectedDate] = useState<"Hoy" | "Ayer" | "Otro">(
-    "Hoy",
-  );
+  const [selectedDate, setSelectedDate] = useState<"Hoy" | "Ayer" | "Otro">("Hoy");
 
   const { data: categories, isLoading: loadingCategories } = useCategories();
   const { mutate: createExpense, isPending } = useCreateExpense();
@@ -63,178 +64,187 @@ export default function AddExpenseScreen() {
     );
   };
 
-  const isValid =
-    amount.length > 0 && selectedCategory !== null && title.trim().length > 0;
+  const isValid = amount.length > 0 && selectedCategory !== null && title.trim().length > 0;
 
   return (
-    <View style={styles.container}>
+    <>
       <Header title="Nuevo gasto" showBack={true} />
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Monto */}
-        <View style={styles.amountSection}>
-          <TextInput
-            style={styles.amountInput}
-            placeholder="0"
-            placeholderTextColor={Colors.border}
-            keyboardType="numeric"
-            value={displayAmount}
-            onChangeText={handleAmountChange}
-            autoFocus
-          />
-        </View>
-        <Text style={styles.amountLabel}>Ingresa el monto del gasto</Text>
-
-        <View style={styles.divider} />
-
-        {/* Título */}
-        <Text style={styles.sectionTitle}>Título</Text>
-        <TextInput
-          style={styles.titleInput}
-          placeholder="Ej: Recarga gas, Mercado..."
-          placeholderTextColor={Colors.textMuted}
-          value={title}
-          onChangeText={setTitle}
-        />
-
-        <View style={styles.divider} />
-
-        {/* Categoría */}
-        <Text style={styles.sectionTitle}>Categoría</Text>
-        {loadingCategories ? (
-          <View style={styles.loadingCategories}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-          </View>
-        ) : categories?.length === 0 ? (
-          <TouchableOpacity
-            style={styles.emptyCategoryBtn}
-            onPress={() => router.push("/(main)/(tabs)/categories" as any)}
+      
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="on-drag"
+            bounces={false}
+            nestedScrollEnabled={true}
           >
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={Colors.primary}
+            {/* Monto */}
+            <View style={styles.amountSection}>
+              <TextInput
+                style={styles.amountInput}
+                placeholder="0"
+                placeholderTextColor={Colors.border}
+                keyboardType="numeric"
+                value={displayAmount}
+                onChangeText={handleAmountChange}
+                autoFocus
+                selectTextOnFocus={true}
+              />
+            </View>
+            <Text style={styles.amountLabel}>Ingresa el monto del gasto</Text>
+
+            <View style={styles.divider} />
+
+            {/* Título */}
+            <Text style={styles.sectionTitle}>Título</Text>
+            <TextInput
+              style={styles.titleInput}
+              placeholder="Ej: Recarga gas, Mercado..."
+              placeholderTextColor={Colors.textMuted}
+              value={title}
+              onChangeText={setTitle}
             />
-            <Text style={styles.emptyCategoryText}>
-              No tienes categorías. Crea una primero.
+
+            <View style={styles.divider} />
+
+            {/* Categoría */}
+            <Text style={styles.sectionTitle}>Categoría</Text>
+            {loadingCategories ? (
+              <View style={styles.loadingCategories}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            ) : categories?.length === 0 ? (
+              <TouchableOpacity
+                style={styles.emptyCategoryBtn}
+                onPress={() => router.push("/(main)/(tabs)/categories" as any)}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+                <Text style={styles.emptyCategoryText}>
+                  No tienes categorías. Crea una primero.
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.categoriesGrid}>
+                {categories?.map((cat) => {
+                  const isSelected = selectedCategory === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryItem,
+                        isSelected && styles.categoryItemSelected,
+                      ]}
+                      onPress={() => setSelectedCategory(cat.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View
+                        style={[
+                          styles.categoryIcon,
+                          isSelected && styles.categoryIconSelected,
+                        ]}
+                      >
+                        <Ionicons
+                          name="pricetag-outline"
+                          size={22}
+                          color={isSelected ? "#FFFFFF" : Colors.primary}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.categoryName,
+                          isSelected && styles.categoryNameSelected,
+                        ]}
+                      >
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            <View style={styles.divider} />
+
+            {/* Descripción */}
+            <Text style={styles.sectionTitle}>
+              Descripción <Text style={styles.optional}>(opcional)</Text>
             </Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.categoriesGrid}>
-            {categories?.map((cat) => {
-              const isSelected = selectedCategory === cat.id;
-              return (
+            <TextInput
+              style={styles.descInput}
+              placeholder="¿Algún detalle adicional?"
+              placeholderTextColor={Colors.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={2}
+            />
+
+            <View style={styles.divider} />
+
+            {/* Fecha */}
+            <Text style={styles.sectionTitle}>Fecha</Text>
+            <View style={styles.dateRow}>
+              {DATE_OPTIONS.map((opt) => (
                 <TouchableOpacity
-                  key={cat.id}
+                  key={opt}
                   style={[
-                    styles.categoryItem,
-                    isSelected && styles.categoryItemSelected,
+                    styles.dateChip,
+                    selectedDate === opt && styles.dateChipSelected,
                   ]}
-                  onPress={() => setSelectedCategory(cat.id)}
-                  activeOpacity={0.7}
+                  onPress={() => setSelectedDate(opt)}
                 >
-                  <View
-                    style={[
-                      styles.categoryIcon,
-                      isSelected && styles.categoryIconSelected,
-                    ]}
-                  >
-                    <Ionicons
-                      name="pricetag-outline"
-                      size={22}
-                      color={isSelected ? "#FFFFFF" : Colors.primary}
-                    />
-                  </View>
                   <Text
                     style={[
-                      styles.categoryName,
-                      isSelected && styles.categoryNameSelected,
+                      styles.dateChipText,
+                      selectedDate === opt && styles.dateChipTextSelected,
                     ]}
                   >
-                    {cat.name}
+                    {opt}
                   </Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
+              ))}
+            </View>
 
-        <View style={styles.divider} />
+            <View style={{ height: 32 }} />
 
-        {/* Descripción */}
-        <Text style={styles.sectionTitle}>
-          Descripción <Text style={styles.optional}>(opcional)</Text>
-        </Text>
-        <TextInput
-          style={styles.descInput}
-          placeholder="¿Algún detalle adicional?"
-          placeholderTextColor={Colors.textMuted}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={2}
-        />
+            <Button
+              label={isPending ? "Guardando..." : "Guardar gasto"}
+              onPress={handleSave}
+              disabled={!isValid || isPending}
+            />
 
-        <View style={styles.divider} />
-
-        {/* Fecha */}
-        <Text style={styles.sectionTitle}>Fecha</Text>
-        <View style={styles.dateRow}>
-          {DATE_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt}
-              style={[
-                styles.dateChip,
-                selectedDate === opt && styles.dateChipSelected,
-              ]}
-              onPress={() => setSelectedDate(opt)}
-            >
-              <Text
-                style={[
-                  styles.dateChipText,
-                  selectedDate === opt && styles.dateChipTextSelected,
-                ]}
-              >
-                {opt}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={{ height: 32 }} />
-
-        <Button
-          label={isPending ? "Guardando..." : "Guardar gasto"}
-          onPress={handleSave}
-          disabled={!isValid || isPending}
-        />
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: 24, paddingTop: 8 },
+  scroll: {
+    padding: 24,
+    paddingTop: 8,
+    paddingBottom: 100, 
+  },
   amountSection: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 24,
     marginBottom: 8,
+    paddingHorizontal: 20,
   },
   amountInput: {
-    fontSize: 64,
+    fontSize: 28,
     fontWeight: "800",
     color: Colors.primary,
-    minWidth: 80,
+    minWidth: 200,
     textAlign: "center",
+    flexShrink: 1,
   },
   amountLabel: {
     textAlign: "center",
