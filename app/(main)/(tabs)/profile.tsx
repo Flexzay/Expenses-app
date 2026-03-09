@@ -259,7 +259,6 @@ export default function ProfileScreen() {
                   isSaving && styles.inputWrapperDisabled,
                 ]}
               >
-                <Text style={styles.inputPrefix}>$</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
