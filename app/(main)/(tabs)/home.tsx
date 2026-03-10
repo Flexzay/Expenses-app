@@ -77,7 +77,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Header
-        title="Expenses"
+        title="Tu Hogar"
         subtitle="Resumen de tu actividad"
         onMenuPress={() => console.log("menu")}
       />
