@@ -1,42 +1,59 @@
 import { Header } from "@/components/ui/Header";
 import { Colors } from "@/constants/colors";
+import { useMonthlyPredictions } from "@/hooks/usePredictions";
+import { useBudgets } from "@/hooks/useBudgets";
+import { useMonthlyLimit } from "@/hooks/useMonthlyLimit";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 
-
-// — datos simulados —
-const MONTHLY_DATA = [
-  { month: "Oct", amount: 280000 },
-  { month: "Nov", amount: 410000 },
-  { month: "Dic", amount: 520000 },
-  { month: "Ene", amount: 390000 },
-  { month: "Feb", amount: 345000 },
-  { month: "Mar", amount: 320000 },
-];
-
-const PREDICTION_NEXT = 480000;
-const BUDGET = 500000;
-const CURRENT_MONTH_SPENT = 320000;
-
-const CATEGORY_PREDICTIONS = [
-  { name: "Energía",         predicted: 95000,  last: 89000,  icon: "flash-outline",           up: true  },
-  { name: "Gas",             predicted: 50000,  last: 45000,  icon: "flame-outline",           up: true  },
-  { name: "Agua",            predicted: 30000,  last: 32000,  icon: "water-outline",           up: false },
-  { name: "Entretenimiento", predicted: 22000,  last: 17900,  icon: "game-controller-outline", up: true  },
-];
-
-const MAX_AMOUNT = Math.max(...MONTHLY_DATA.map((d) => d.amount), PREDICTION_NEXT);
 const BAR_HEIGHT = 140;
 
 function formatAmount(n: number) {
   if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
   return `$${n}`;
-}
+} 
 
 export default function PredictionsScreen() {
-  const willExceedBudget = PREDICTION_NEXT > BUDGET;
-  const predictedPercent = Math.round((PREDICTION_NEXT / BUDGET) * 100);
+  const { data: predictions, isLoading, isError } = useMonthlyPredictions();
+  const { monthlyLimit: BUDGET, spentThisMonth: CURRENT_MONTH_SPENT } = useMonthlyLimit();
+
+  // Datos históricos mensuales del endpoint
+  const monthlyHistory = predictions?.monthly_history ?? [];
+  const PREDICTION_NEXT = predictions?.next_month_prediction ?? 0;
+  const categoryPredictions = predictions?.category_predictions ?? [];
+
+  const MAX_AMOUNT = Math.max(
+    ...monthlyHistory.map((d) => d.amount),
+    PREDICTION_NEXT,
+    1
+  );
+
+  const willExceedBudget = BUDGET > 0 && PREDICTION_NEXT > BUDGET;
+  const predictedPercent = BUDGET > 0 ? Math.round((PREDICTION_NEXT / BUDGET) * 100) : 0;
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Header title="Predicción" subtitle="Análisis de tus gastos" showBack={true} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (isError || !predictions) {
+    return (
+      <View style={styles.container}>
+        <Header title="Predicción" subtitle="Análisis de tus gastos" showBack={true} />
+        <View style={styles.centered}>
+          <Ionicons name="cloud-offline-outline" size={48} color={Colors.textMuted} />
+          <Text style={styles.errorText}>No se pudieron cargar las predicciones</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -67,7 +84,9 @@ export default function PredictionsScreen() {
         <View style={styles.predictionCard}>
           <View style={styles.predictionTop}>
             <View>
-              <Text style={styles.predictionLabel}>Predicción — Abril 2026</Text>
+              <Text style={styles.predictionLabel}>
+                Predicción — {predictions.next_month_label ?? "Próximo mes"}
+              </Text>
               <Text style={styles.predictionAmount}>
                 {formatAmount(PREDICTION_NEXT)}
               </Text>
@@ -126,9 +145,9 @@ export default function PredictionsScreen() {
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Últimos 6 meses + predicción</Text>
           <View style={styles.chart}>
-            {MONTHLY_DATA.map((item, index) => {
+            {monthlyHistory.map((item, index) => {
               const height = (item.amount / MAX_AMOUNT) * BAR_HEIGHT;
-              const isLast = index === MONTHLY_DATA.length - 1;
+              const isLast = index === monthlyHistory.length - 1;
               return (
                 <View key={item.month} style={styles.barWrapper}>
                   <Text style={styles.barAmount}>{formatAmount(item.amount)}</Text>
@@ -166,7 +185,7 @@ export default function PredictionsScreen() {
                 />
               </View>
               <Text style={[styles.barMonth, { color: willExceedBudget ? Colors.danger : Colors.accent }]}>
-                Abr*
+                {predictions.next_month_short ?? "Sig*"}
               </Text>
             </View>
           </View>
@@ -175,54 +194,56 @@ export default function PredictionsScreen() {
         </View>
 
         {/* Predicción por categoría */}
-        <Text style={styles.sectionTitle}>Predicción por categoría</Text>
+        {categoryPredictions.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Predicción por categoría</Text>
 
-        {CATEGORY_PREDICTIONS.map((cat) => {
-          const pct = Math.round((cat.predicted / PREDICTION_NEXT) * 100);
-          return (
-            <View key={cat.name} style={styles.catCard}>
-              <View style={styles.catHeader}>
-                <View style={styles.catIconWrap}>
-                  <Ionicons name={cat.icon as any} size={18} color={Colors.primary} />
-                </View>
-                <Text style={styles.catName}>{cat.name}</Text>
-                <View style={styles.catRight}>
-                  <Text style={styles.catAmount}>{formatAmount(cat.predicted)}</Text>
-                  <View
-                    style={[
-                      styles.catTrend,
-                      { backgroundColor: cat.up ? "#FEE2E2" : "#DCFCE7" },
-                    ]}
-                  >
-                    <Ionicons
-                      name={cat.up ? "arrow-up" : "arrow-down"}
-                      size={11}
-                      color={cat.up ? Colors.danger : Colors.accent}
-                    />
-                    <Text
-                      style={[
-                        styles.catTrendText,
-                        { color: cat.up ? Colors.danger : Colors.accent },
-                      ]}
-                    >
-                      {formatAmount(Math.abs(cat.predicted - cat.last))}
-                    </Text>
+            {categoryPredictions.map((cat) => {
+              const pct = PREDICTION_NEXT > 0
+                ? Math.round((cat.predicted / PREDICTION_NEXT) * 100)
+                : 0;
+              const isUp = cat.predicted > cat.last;
+              return (
+                <View key={cat.name} style={styles.catCard}>
+                  <View style={styles.catHeader}>
+                    <View style={styles.catIconWrap}>
+                      <Ionicons name={(cat.icon ?? "pricetag-outline") as any} size={18} color={Colors.primary} />
+                    </View>
+                    <Text style={styles.catName}>{cat.name}</Text>
+                    <View style={styles.catRight}>
+                      <Text style={styles.catAmount}>{formatAmount(cat.predicted)}</Text>
+                      <View
+                        style={[
+                          styles.catTrend,
+                          { backgroundColor: isUp ? "#FEE2E2" : "#DCFCE7" },
+                        ]}
+                      >
+                        <Ionicons
+                          name={isUp ? "arrow-up" : "arrow-down"}
+                          size={11}
+                          color={isUp ? Colors.danger : Colors.accent}
+                        />
+                        <Text
+                          style={[
+                            styles.catTrendText,
+                            { color: isUp ? Colors.danger : Colors.accent },
+                          ]}
+                        >
+                          {formatAmount(Math.abs(cat.predicted - cat.last))}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
 
-              <View style={styles.catProgressTrack}>
-                <View
-                  style={[
-                    styles.catProgressFill,
-                    { width: `${pct}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.catPct}>{pct}% del total estimado</Text>
-            </View>
-          );
-        })}
+                  <View style={styles.catProgressTrack}>
+                    <View style={[styles.catProgressFill, { width: `${pct}%` }]} />
+                  </View>
+                  <Text style={styles.catPct}>{pct}% del total estimado</Text>
+                </View>
+              );
+            })}
+          </>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -238,6 +259,17 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 20,
     paddingTop: 12,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    textAlign: "center",
   },
 
   // Alerta

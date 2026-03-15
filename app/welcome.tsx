@@ -7,7 +7,7 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.logo}>Expenses App</Text>
+        <Text style={styles.logo}>Finanzaas</Text>
         <Text style={styles.title}>Bienvenido</Text>
         <Text style={styles.subtitle}>
           Una experiencia simple y minimalista para tu día a día.
