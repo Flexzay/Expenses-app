@@ -1,4 +1,8 @@
+import { useBudgets } from "@/hooks/useBudgets";
 import { useCategories } from "@/hooks/useCategories";
+import { useCreateBudget } from "@/hooks/useCreateBudget";
+import { useDeleteBudget } from "@/hooks/useDeleteBudget";
+import { useUpdateBudget } from "@/hooks/useUpdateBudget";
 import { Budget } from "@/services/budgets";
 import { formatCOP } from "@/utils/currency";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -18,18 +22,24 @@ import {
 import { Button } from "../../../components/ui/Button";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
-import { useBudgets } from "@/hooks/useBudgets";
-import { useCreateBudget } from "@/hooks/useCreateBudget";
-import { useDeleteBudget } from "@/hooks/useDeleteBudget";
-import { useUpdateBudget } from "@/hooks/useUpdateBudget";
 
 const NOW = new Date();
 const CURRENT_MONTH = NOW.getMonth() + 1;
 const CURRENT_YEAR = NOW.getFullYear();
 
 const MONTH_NAMES = [
-  "Enero","Febrero","Marzo","Abril","Mayo","Junio",
-  "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
 ];
 
 type ModalMode = "add" | "edit";
@@ -50,10 +60,11 @@ export default function BudgetsScreen() {
 
   // Categorías que aún NO tienen presupuesto este mes
   const usedCategoryIds = new Set(budgets?.map((b) => b.category_id) ?? []);
-  const availableCategories = categories?.filter((c) => !usedCategoryIds.has(c.id)) ?? [];
+  const availableCategories =
+    categories?.filter((c) => !usedCategoryIds.has(c.id)) ?? [];
 
   const totalBudgeted = budgets?.reduce((acc, b) => acc + b.amount, 0) ?? 0;
-  const totalSpent    = budgets?.reduce((acc, b) => acc + b.spent,  0) ?? 0;
+  const totalSpent = budgets?.reduce((acc, b) => acc + b.spent, 0) ?? 0;
 
   const handleAmountChange = (text: string) => {
     const raw = text.replace(/[^0-9]/g, "");
@@ -101,12 +112,12 @@ export default function BudgetsScreen() {
           month: CURRENT_MONTH,
           year: CURRENT_YEAR,
         },
-        { onSuccess: closeModal }
+        { onSuccess: closeModal },
       );
     } else if (selectedBudget) {
       updateBudget(
         { id: selectedBudget.id, payload: { amount: parsed } },
-        { onSuccess: closeModal }
+        { onSuccess: closeModal },
       );
     }
   };
@@ -121,9 +132,10 @@ export default function BudgetsScreen() {
         {
           text: "Eliminar",
           style: "destructive",
-          onPress: () => deleteBudget(selectedBudget.id, { onSuccess: closeModal }),
+          onPress: () =>
+            deleteBudget(selectedBudget.id, { onSuccess: closeModal }),
         },
-      ]
+      ],
     );
   };
 
@@ -135,10 +147,15 @@ export default function BudgetsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Presupuestos" subtitle={`${MONTH_NAMES[CURRENT_MONTH - 1]} ${CURRENT_YEAR}`} />
+      <Header
+        title="Presupuestos"
+        subtitle={`${MONTH_NAMES[CURRENT_MONTH - 1]} ${CURRENT_YEAR}`}
+      />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Resumen total */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryCol}>
@@ -176,9 +193,13 @@ export default function BudgetsScreen() {
           </View>
         ) : (
           budgets?.map((budget) => {
-            const pct = budget.amount > 0
-              ? Math.min(Math.round((budget.spent / budget.amount) * 100), 100)
-              : 0;
+            const pct =
+              budget.amount > 0
+                ? Math.min(
+                    Math.round((budget.spent / budget.amount) * 100),
+                    100,
+                  )
+                : 0;
             const barColor =
               pct >= 90 ? Colors.danger : pct >= 70 ? "#F59E0B" : Colors.accent;
             const remaining = Math.max(budget.amount - budget.spent, 0);
@@ -193,11 +214,19 @@ export default function BudgetsScreen() {
                 {/* Header */}
                 <View style={styles.budgetHeader}>
                   <View style={styles.categoryBadge}>
-                    <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
-                    <Text style={styles.categoryName}>{budget.category?.name}</Text>
+                    <Ionicons
+                      name="pricetag-outline"
+                      size={16}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.categoryName}>
+                      {budget.category?.name}
+                    </Text>
                   </View>
                   <View style={styles.pctBadge}>
-                    <Text style={[styles.pctText, { color: barColor }]}>{pct}%</Text>
+                    <Text style={[styles.pctText, { color: barColor }]}>
+                      {pct}%
+                    </Text>
                   </View>
                 </View>
 
@@ -214,10 +243,16 @@ export default function BudgetsScreen() {
                 {/* Montos */}
                 <View style={styles.budgetAmounts}>
                   <Text style={styles.spentText}>
-                    Gastado: <Text style={{ color: Colors.danger, fontWeight: "700" }}>{formatCOP(budget.spent)}</Text>
+                    Gastado:{" "}
+                    <Text style={{ color: Colors.danger, fontWeight: "700" }}>
+                      {formatCOP(budget.spent)}
+                    </Text>
                   </Text>
                   <Text style={styles.remainingText}>
-                    Restante: <Text style={{ color: Colors.accent, fontWeight: "700" }}>{formatCOP(remaining)}</Text>
+                    Restante:{" "}
+                    <Text style={{ color: Colors.accent, fontWeight: "700" }}>
+                      {formatCOP(remaining)}
+                    </Text>
                   </Text>
                 </View>
 
@@ -234,7 +269,11 @@ export default function BudgetsScreen() {
 
       {/* FAB */}
       {availableCategories.length > 0 && (
-        <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={openAdd}>
+        <TouchableOpacity
+          style={styles.fab}
+          activeOpacity={0.85}
+          onPress={openAdd}
+        >
           <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
@@ -262,7 +301,9 @@ export default function BudgetsScreen() {
             {/* Header modal */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {modalMode === "add" ? "Nuevo presupuesto" : "Editar presupuesto"}
+                {modalMode === "add"
+                  ? "Nuevo presupuesto"
+                  : "Editar presupuesto"}
               </Text>
               <View style={styles.modalHeaderRight}>
                 {modalMode === "edit" && (
@@ -271,7 +312,11 @@ export default function BudgetsScreen() {
                     onPress={handleDelete}
                     disabled={isPending}
                   >
-                    <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={Colors.danger}
+                    />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
@@ -323,7 +368,11 @@ export default function BudgetsScreen() {
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Categoría</Text>
                   <View style={styles.categoryFixed}>
-                    <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
+                    <Ionicons
+                      name="pricetag-outline"
+                      size={16}
+                      color={Colors.primary}
+                    />
                     <Text style={styles.categoryFixedText}>
                       {selectedBudget.category?.name}
                     </Text>
@@ -366,11 +415,21 @@ export default function BudgetsScreen() {
               {/* Acciones */}
               <View style={styles.modalActions}>
                 <View style={styles.cancelBtn}>
-                  <Button label="Cancelar" variant="ghost" onPress={closeModal} />
+                  <Button
+                    label="Cancelar"
+                    variant="ghost"
+                    onPress={closeModal}
+                  />
                 </View>
                 <View style={styles.saveBtn}>
                   <Button
-                    label={isPending ? "Guardando..." : modalMode === "add" ? "Agregar" : "Guardar"}
+                    label={
+                      isPending
+                        ? "Guardando..."
+                        : modalMode === "add"
+                          ? "Agregar"
+                          : "Guardar"
+                    }
                     onPress={handleSave}
                     disabled={!isValid || isPending}
                   />
@@ -400,9 +459,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   summaryCol: { flex: 1, alignItems: "center" },
-  summaryLabel: { fontSize: 11, color: "rgba(255,255,255,0.7)", marginBottom: 4 },
+  summaryLabel: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 4,
+  },
   summaryAmount: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
-  summaryDivider: { width: 1, height: 36, backgroundColor: "rgba(255,255,255,0.2)" },
+  summaryDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
 
   sectionTitle: {
     fontSize: 16,
@@ -481,7 +548,10 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
   modalCard: {
     backgroundColor: Colors.card,
     borderTopLeftRadius: 28,
@@ -529,7 +599,12 @@ const styles = StyleSheet.create({
 
   // Fields
   field: { marginBottom: 20 },
-  fieldLabel: { fontSize: 14, fontWeight: "700", color: Colors.text, marginBottom: 10 },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 10,
+  },
   fieldHint: { fontSize: 13, color: Colors.textMuted },
   categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   categoryChip: {
@@ -544,7 +619,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: Colors.primary,
   },
-  categoryChipText: { fontSize: 14, fontWeight: "600", color: Colors.textMuted },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textMuted,
+  },
   categoryChipTextSelected: { color: "#FFFFFF" },
   categoryFixed: {
     flexDirection: "row",
@@ -567,7 +646,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     paddingHorizontal: 16,
   },
-  input: { flex: 1, paddingVertical: 14, fontSize: 22, fontWeight: "700", color: Colors.text },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 22,
+    fontWeight: "700",
+    color: Colors.text,
+  },
   infoBox: {
     backgroundColor: Colors.background,
     borderRadius: 12,

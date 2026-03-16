@@ -1,16 +1,27 @@
 import { request } from "./request";
 
-export type MonthlyPrediction = {
-  month: string;           // e.g. "2026-03"
-  predicted_amount: number;
-  actual_amount?: number;
-  category_id?: number;
-  category?: string;
+export type MonthlyHistoryItem = {
+  month: string;
+  year: number;
+  amount: number;
+};
+
+export type CurrentMonthStats = {
+  month: string;
+  year: number;
+  spent_so_far: number;
+  daily_rate: number;
+  days_elapsed: number;
+  days_in_month: number;
+  projected_amount: number;
 };
 
 export type MonthlyPredictionsResponse = {
-  predictions: MonthlyPrediction[];
-  // ajusta según lo que devuelva tu API
+  history: MonthlyHistoryItem[];
+  current_month: CurrentMonthStats;
+  prediction: number;
+  trend_pct: number;
+  average: number;
 };
 
 export async function getMonthlyPredictionsService() {
