@@ -20,6 +20,24 @@ import { CategoryCard } from "../../../components/ui/CategoryCard";
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
 
+const PREDEFINED_CATEGORIES = [
+  "Alimentación",
+  "Transporte",
+  "Vivienda",
+  "Servicios",
+  "Salud",
+  "Educación",
+  "Entretenimiento",
+  "Ropa y Calzado",
+  "Deporte",
+  "Mascotas",
+  "Viajes",
+  "Ahorros",
+  "Regalos",
+  "Suscripciones",
+  "Otros",
+];
+
 export default function CategoriesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [nameInput, setNameInput] = useState("");
@@ -143,8 +161,39 @@ export default function CategoriesScreen() {
             </View>
 
             <Text style={styles.modalSubtitle}>
-              Crea una categoría para clasificar tus gastos.
+              Crea una categoría o elige una de nuestras sugerencias para clasificar tus gastos.
             </Text>
+
+            {/* Sugerencias de Categorías */}
+            <View>
+              <Text style={styles.fieldLabel}>Sugerencias</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                style={styles.suggestionsScroll}
+                contentContainerStyle={styles.suggestionsContainer}
+              >
+                {PREDEFINED_CATEGORIES.map((cat, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.suggestionChip,
+                      nameInput === cat && styles.suggestionChipActive
+                    ]}
+                    onPress={() => setNameInput(cat)}
+                  >
+                    <Text 
+                      style={[
+                        styles.suggestionText,
+                        nameInput === cat && styles.suggestionTextActive
+                      ]}
+                    >
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Nombre</Text>
@@ -154,7 +203,6 @@ export default function CategoriesScreen() {
                 placeholderTextColor={Colors.textMuted}
                 value={nameInput}
                 onChangeText={setNameInput}
-                autoFocus
                 editable={!isPending}
                 onSubmitEditing={handleCreate}
               />
@@ -264,6 +312,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: -8,
   },
+  
+  // Estilos de las sugerencias
+  suggestionsScroll: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  suggestionsContainer: {
+    gap: 8,
+    paddingRight: 20,
+  },
+  suggestionChip: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  suggestionChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  suggestionTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
   field: { gap: 8 },
   fieldLabel: { fontSize: 14, fontWeight: "600", color: Colors.text },
   input: {
