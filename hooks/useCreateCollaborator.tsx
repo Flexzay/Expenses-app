@@ -8,6 +8,7 @@ export function useCreateCollaborator() {
     mutationFn: createCollaboratorService,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collaborators"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo agregar el colaborador.");

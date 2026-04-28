@@ -6,6 +6,5 @@ export function useCollaborators() {
     queryKey: ["collaborators"],
     queryFn: getCollaboratorsService,
     staleTime: 0,
-    retry: 1,
   });
 }

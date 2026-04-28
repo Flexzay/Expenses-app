@@ -79,7 +79,7 @@ export default function HomeScreen() {
       <Header
         title="Tu Hogar"
         subtitle="Resumen de tu actividad"
-        onMenuPress={() => console.log("menu")}
+        onMenuPress={() => router.push("/(main)/investments" as any)}
       />
 
       <ScrollView

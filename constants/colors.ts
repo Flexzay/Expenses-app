@@ -24,4 +24,4 @@ export const Palettes = {
   },
 };
 
-export const Colors = Palettes.green;
+export const Colors = Palettes.blue;

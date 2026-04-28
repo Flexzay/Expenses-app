@@ -41,7 +41,6 @@ export function useProfile() {
     queryKey: ["profile"],
     queryFn: profileService,
     staleTime: 0,
-    retry: 1,
   });
 }
 

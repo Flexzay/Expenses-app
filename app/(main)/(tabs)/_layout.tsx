@@ -42,19 +42,21 @@ export default function MainTabsLayout() {
         }}
       />
 
+      
       <Tabs.Screen
-        name="predictions"
+        name="analytics"
         options={{
-          title: "Predicción",
+          title: "Análisis",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
-              name={focused ? "trending-up" : "trending-up-outline"}
+              name={focused ? "analytics" : "analytics-outline"}
               color={color}
               size={size}
             />
           ),
         }}
       />
+     
       
       <Tabs.Screen
         name="budget"

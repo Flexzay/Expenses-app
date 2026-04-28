@@ -9,6 +9,7 @@ export function useUpdateCollaborator() {
       updateCollaboratorService(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collaborators"] });
+       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo actualizar el colaborador.");
