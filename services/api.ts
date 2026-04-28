@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const BASE_URL = "http://192.168.1.3:8000";
+const BASE_URL = "http://192.168.1.5:8000";
 // const BASE_URL = "http://172.20.10.3:8000";
 
 export const api = axios.create({
@@ -31,3 +31,21 @@ export async function getToken() {
   }
   return token;
 }
+
+
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  async (error) => {
+    
+    if (error.response && error.response.status === 401) {
+      console.log("Token inválido o expirado. Limpiando storage...");
+
+      await setToken(null);
+      
+    }
+
+    return Promise.reject(error);
+  }
+);
