@@ -1,6 +1,6 @@
+import { deleteCollaboratorService } from "@/services/collaborators";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "react-native";
-import { deleteCollaboratorService } from "@/services/collaborators";
 
 export function useDeleteCollaborator() {
   const queryClient = useQueryClient();
@@ -8,6 +8,7 @@ export function useDeleteCollaborator() {
     mutationFn: deleteCollaboratorService,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collaborators"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo eliminar el colaborador.");

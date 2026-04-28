@@ -1,6 +1,6 @@
+import { createExpenseService } from "@/services/expenses";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "react-native";
-import { createExpenseService } from "@/services/expenses";
 
 export function useCreateExpense() {
   const queryClient = useQueryClient();
@@ -10,7 +10,8 @@ export function useCreateExpense() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
-
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
+      queryClient.invalidateQueries({ queryKey: ["wealth", "summary"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo guardar el gasto.");

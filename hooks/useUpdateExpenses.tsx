@@ -10,6 +10,8 @@ export function useUpdateExpense(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses", id] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
+      queryClient.invalidateQueries({ queryKey: ["wealth", "summary"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo actualizar el gasto.");

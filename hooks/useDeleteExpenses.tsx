@@ -9,6 +9,8 @@ export function useDeleteExpense() {
     mutationFn: deleteExpenseService,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] })
+      queryClient.invalidateQueries({ queryKey: ["wealth", "summary"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo eliminar el gasto.");

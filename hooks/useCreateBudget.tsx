@@ -7,6 +7,7 @@ export function useCreateBudget() {
     mutationFn: (payload: CreateBudgetPayload) => createBudgetService(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
   });
 }

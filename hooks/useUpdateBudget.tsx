@@ -8,6 +8,7 @@ export function useUpdateBudget() {
       updateBudgetService(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
   });
 }

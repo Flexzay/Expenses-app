@@ -7,6 +7,7 @@ export function useDeleteBudget() {
     mutationFn: (id: number) => deleteBudgetService(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
   });
 }

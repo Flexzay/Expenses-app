@@ -9,6 +9,7 @@ export function useUpdateAmount() {
     mutationFn: updateAmountService,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo actualizar el monto.");

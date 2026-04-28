@@ -9,6 +9,7 @@ export function useCreateCollaborator() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collaborators"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics", "daily"] });
     },
     onError: () => {
       Alert.alert("Error", "No se pudo agregar el colaborador.");
