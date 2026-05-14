@@ -20,3 +20,7 @@ export async function getCategoriesService() {
 export async function createCategoryService(payload: CreateCategoryPayload) {
   return request<Category>("post", "/categories", payload);
 }
+
+export async function deleteCategoryService(id: number) {
+  return request<void>("delete", `/categories/${id}`);
+}

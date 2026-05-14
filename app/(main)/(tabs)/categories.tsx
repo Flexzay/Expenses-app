@@ -1,10 +1,12 @@
 import { useCategories } from "@/hooks/useCategories";
 import { useCreateCategory } from "@/hooks/useCreateCategory";
+import { useDeleteCategory } from "@/hooks/useDeleteCategory";
 import { Category } from "@/services/categories";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,15 +26,29 @@ export default function CategoriesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [nameInput, setNameInput] = useState("");
 
-  // ¡Mira qué simple! Ya solo traemos la data directa del backend
   const { data: categories, isLoading, isError } = useCategories();
   const { mutate: createCategory, isPending } = useCreateCategory();
+  const { mutate: deleteCategory } = useDeleteCategory();
 
   const handleOpenModal = () => {
     setNameInput("");
     setModalVisible(true);
   };
 
+  const handleDelete = (id: number, name: string) => {
+    Alert.alert(
+      "Eliminar categoría",
+      `¿Estás seguro de que quieres eliminar "${name}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => deleteCategory(id),
+        },
+      ],
+    );
+  };
   const handleClose = () => {
     setModalVisible(false);
     setNameInput("");
@@ -62,20 +78,31 @@ export default function CategoriesScreen() {
           </View>
         ) : isError ? (
           <View style={styles.centered}>
-            <Ionicons name="cloud-offline-outline" size={40} color={Colors.textMuted} />
+            <Ionicons
+              name="cloud-offline-outline"
+              size={40}
+              color={Colors.textMuted}
+            />
             <Text style={styles.errorText}>Error al cargar categorías</Text>
           </View>
         ) : (
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionLabel}>
-              {categories?.length ?? 0} {(categories?.length ?? 0) === 1 ? "categoría" : "categorías"}
+              {categories?.length ?? 0}{" "}
+              {(categories?.length ?? 0) === 1 ? "categoría" : "categorías"}
             </Text>
 
             {categories?.length === 0 ? (
               <View style={styles.emptyWrap}>
-                <Ionicons name="pricetags-outline" size={44} color={Colors.border} />
+                <Ionicons
+                  name="pricetags-outline"
+                  size={44}
+                  color={Colors.border}
+                />
                 <Text style={styles.emptyTitle}>Sin categorías</Text>
-                <Text style={styles.emptySubtitle}>Pulsa + para agregar tu primera categoría</Text>
+                <Text style={styles.emptySubtitle}>
+                  Pulsa + para agregar tu primera categoría
+                </Text>
               </View>
             ) : (
               categories?.map((item: Category) => (
@@ -83,7 +110,7 @@ export default function CategoriesScreen() {
                   <CategoryCard
                     name={item.name}
                     icon="pricetag-outline"
-                    onDelete={() => {}}
+                    onDelete={() => handleDelete(item.id, item.name)}
                   />
                 </View>
               ))
@@ -96,15 +123,31 @@ export default function CategoriesScreen() {
 
       {/* FAB */}
       {!isLoading && !isError && (
-        <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={handleOpenModal}>
+        <TouchableOpacity
+          style={styles.fab}
+          activeOpacity={0.85}
+          onPress={handleOpenModal}
+        >
           <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
 
       {/* Modal */}
-      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={handleClose}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={handleClose} />
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleClose}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
           <View style={styles.modalCard}>
             <View style={styles.handleBar} />
             <View style={styles.modalHeader}>
@@ -133,7 +176,11 @@ export default function CategoriesScreen() {
 
             <View style={styles.modalActions}>
               <View style={styles.cancelBtn}>
-                <Button label="Cancelar" variant="ghost" onPress={handleClose} />
+                <Button
+                  label="Cancelar"
+                  variant="ghost"
+                  onPress={handleClose}
+                />
               </View>
               <View style={styles.saveBtn}>
                 <Button
@@ -232,7 +279,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: -8,
   },
-  
+
   // Estilos de las sugerencias
   suggestionsScroll: {
     marginTop: 8,
