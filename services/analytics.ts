@@ -24,6 +24,10 @@ export interface AnalyticsResponse {
   };
   projection: {
     end_of_month_estimate: number;
+    optimistic_estimate: number;
+    pessimistic_estimate: number;
+    margin_of_error: number;
+    confidence_level: string;
     will_exceed_budget: boolean;
   };
   daily_series: DailyDataPoint[];

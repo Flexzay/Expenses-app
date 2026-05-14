@@ -50,13 +50,10 @@ export default function AnalyticsScreen() {
 
   const { calculus, statistics, projection, daily_series } = data;
 
-  // Calculamos el valor máximo del mes para darle un "techo" cómodo a la gráfica
   const maxSpendInMonth = Math.max(...daily_series.map(d => d.spent_today));
-  const chartMaxValue = maxSpendInMonth > 0 ? maxSpendInMonth * 1.2 : 1000; // 20% de espacio extra arriba
+  const chartMaxValue = maxSpendInMonth > 0 ? maxSpendInMonth * 1.2 : 1000; 
 
-  // Configuramos las barras sin emojis
   const chartData = daily_series.map((point) => {
-    // Si el gasto de hoy es 50% mayor al promedio, pintamos la barra de otro color
     const isHighSpend = point.spent_today > statistics.daily_mean * 1.5; 
     
     return {
@@ -68,8 +65,6 @@ export default function AnalyticsScreen() {
 
   const isAccelerating = calculus.acceleration > 0;
   const isVolatile = statistics.volatility_status === "Alta volatilidad";
-
-  // Obtenemos el total acumulado
   const currentTotal = daily_series.length > 0 ? daily_series[daily_series.length - 1].cumulative : 0;
 
   return (
@@ -78,7 +73,7 @@ export default function AnalyticsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         
-        {/* 1. GRÁFICA DE BARRAS (MÁS ALTA Y LIMPIA) */}
+        {/* 1. GRÁFICA DE BARRAS */}
         <View style={styles.chartCard}>
           <View style={styles.cardHeaderTop}>
             <View>
@@ -94,8 +89,8 @@ export default function AnalyticsScreen() {
             <View style={styles.chartWrapper}>
               <BarChart
                 data={chartData}
-                height={250}      // <-- Aumentamos la altura de 160 a 250
-                maxValue={chartMaxValue} // <-- Evita que las barras altas se corten
+                height={250}      
+                maxValue={chartMaxValue} 
                 barWidth={22}     
                 spacing={16}      
                 initialSpacing={10}
@@ -158,35 +153,51 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* 3. PREDICCIÓN */}
-        <Text style={styles.sectionTitle}>Estimación a fin de mes</Text>
-        <View style={styles.grid}>
-          <View style={styles.gridItem}>
-            <View style={[styles.iconCircle, { backgroundColor: isVolatile ? '#fef9c3' : Colors.background }]}>
-              <Ionicons name="pulse" size={22} color={isVolatile ? '#ca8a04' : Colors.primary} />
+        {/* 3. PREDICCIÓN PROBABILÍSTICA */}
+        <Text style={styles.sectionTitle}>Predicción Probabilística</Text>
+        <View style={styles.projectionCard}>
+          
+          <View style={styles.projectionHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="analytics-outline" size={24} color={Colors.primary} />
+              <Text style={styles.projectionTitle}>Gasto Final Estimado</Text>
             </View>
-            <Text style={styles.gridLabel}>Variabilidad</Text>
-            <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
-              {isVolatile ? "Inestable" : "Estable"}
-            </Text>
-            <Text style={styles.gridSub}>Consistencia</Text>
+            
+            <View style={[styles.volatilityBadge, { backgroundColor: isVolatile ? '#fef9c3' : '#dcfce7' }]}>
+              <Ionicons 
+                name={isVolatile ? "warning" : "checkmark-circle"} 
+                size={14} 
+                color={isVolatile ? '#ca8a04' : Colors.accent} 
+              />
+              <Text style={[styles.volatilityText, { color: isVolatile ? '#ca8a04' : Colors.accent }]}>
+                {isVolatile ? 'Inestable' : 'Estable'}
+              </Text>
+            </View>
           </View>
+          
+          <Text style={styles.projectionMainNumber}>
+            {formatCompact(projection.end_of_month_estimate)}
+          </Text>
+          <Text style={styles.projectionSub}>
+            Con un {projection.confidence_level} de certeza, cerrarás el mes en este rango:
+          </Text>
 
-          <View style={styles.gridItem}>
-            <View style={[styles.iconCircle, { backgroundColor: projection.will_exceed_budget ? '#fee2e2' : '#dcfce7' }]}>
-              <Ionicons name="flag" size={22} color={projection.will_exceed_budget ? Colors.danger : Colors.accent} />
+          <View style={styles.rangeContainer}>
+            <View style={styles.rangeBox}>
+              <Text style={styles.rangeLabel}>Mejor Escenario</Text>
+              <Text style={styles.rangeValueOptimistic}>
+                {formatCompact(projection.optimistic_estimate)}
+              </Text>
             </View>
-            <Text style={styles.gridLabel}>Proyección</Text>
-            <Text 
-              style={[styles.gridValue, { color: projection.will_exceed_budget ? Colors.danger : Colors.text }]}
-              adjustsFontSizeToFit 
-              numberOfLines={1}
-            >
-              {formatCompact(projection.end_of_month_estimate)}
-            </Text>
-            <Text style={styles.gridSub} numberOfLines={1}>
-              {projection.will_exceed_budget ? "Te pasarás" : "En presupuesto"}
-            </Text>
+            
+            <View style={styles.rangeDivider} />
+            
+            <View style={styles.rangeBox}>
+              <Text style={styles.rangeLabel}>Peor Escenario</Text>
+              <Text style={styles.rangeValuePessimistic}>
+                {formatCompact(projection.pessimistic_estimate)}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -212,100 +223,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 3,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16 },
+      android: { elevation: 3 },
     }),
   },
-  cardHeaderTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
+  cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   cardSubtitle: { fontSize: 14, color: Colors.textMuted, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   heroNumber: { fontSize: 36, fontWeight: '900', color: Colors.text, letterSpacing: -1 },
-  iconBadge: {
-    backgroundColor: `${Colors.primary}15`,
-    padding: 8,
-    borderRadius: 12,
-  },
+  iconBadge: { backgroundColor: `${Colors.primary}15`, padding: 8, borderRadius: 12 },
   
-  chartWrapper: { 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    marginLeft: -10, 
-    marginTop: 10, // Un poco de espacio arriba para que el tooltip respire
-  },
+  chartWrapper: { alignItems: 'center', justifyContent: 'center', marginLeft: -10, marginTop: 10 },
   emptyChartContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 12 },
   emptyChart: { color: Colors.textMuted, fontSize: 14, fontWeight: '500' },
 
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: Colors.text,
-    marginBottom: 16,
-    paddingLeft: 4,
-    letterSpacing: -0.5,
-  },
-  grid: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: "800", color: Colors.text, marginBottom: 16, paddingLeft: 4, letterSpacing: -0.5 },
+  grid: { flexDirection: "row", gap: 12, marginBottom: 28 },
   gridItem: {
-    flex: 1,
-    backgroundColor: Colors.card,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.03)',
+    flex: 1, backgroundColor: Colors.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
     ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 2 },
     }),
   },
-  iconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: `${Colors.primary}10`,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-  },
+  iconCircle: { width: 42, height: 42, borderRadius: 12, backgroundColor: `${Colors.primary}10`, justifyContent: "center", alignItems: "center", marginBottom: 14 },
   gridLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 4, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   gridValue: { fontSize: 20, fontWeight: "800", color: Colors.text, marginBottom: 4 },
   gridSub: { fontSize: 12, color: Colors.textMuted },
   
-  tooltip: {
-      backgroundColor: Colors.text, 
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 10, 
-      marginBottom: 12, 
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 6,
-      elevation: 5,
+  projectionCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 },
+      android: { elevation: 2 },
+    }),
   },
-  tooltipText: {
-      color: '#ffffff',
-      fontSize: 13,
-      fontWeight: '800'
-  }
+  projectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  projectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.textMuted, textTransform: 'uppercase' },
+  
+  volatilityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8 },
+  volatilityText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  
+  projectionMainNumber: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1.5, marginBottom: 8 },
+  projectionSub: { fontSize: 13, color: Colors.textMuted, lineHeight: 20, marginBottom: 24 },
+  
+  rangeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background, borderRadius: 16, padding: 16 },
+  rangeBox: { flex: 1, alignItems: 'center' },
+  rangeLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase' },
+  rangeValueOptimistic: { fontSize: 18, fontWeight: '800', color: Colors.accent },
+  rangeValuePessimistic: { fontSize: 18, fontWeight: '800', color: Colors.danger },
+  rangeDivider: { width: 1, height: 30, backgroundColor: Colors.border, marginHorizontal: 12 },
+
+  tooltip: { backgroundColor: Colors.text, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 },
+  tooltipText: { color: '#ffffff', fontSize: 13, fontWeight: '800' }
 });
