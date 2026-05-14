@@ -7,8 +7,9 @@ import {
   Text,
   View,
   Dimensions,
+  Platform,
 } from "react-native";
-import { LineChart } from "react-native-gifted-charts";
+import { BarChart } from "react-native-gifted-charts"; 
 import { Header } from "../../../components/ui/Header";
 import { Colors } from "../../../constants/colors";
 
@@ -16,7 +17,7 @@ const { width } = Dimensions.get("window");
 
 function formatCompact(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
   return `$${Math.round(n)}`;
 }
 
@@ -47,16 +48,29 @@ export default function AnalyticsScreen() {
     );
   }
 
-  const { calculus, statistics, projection, daily_series, budget } = data;
+  const { calculus, statistics, projection, daily_series } = data;
 
-  const chartData = daily_series.map((point) => ({
-    value: point.cumulative,
-    label: `${point.day}`,
-    dataPointText: point.spent_today > statistics.daily_mean * 1.5 ? "🔥" : "",
-  }));
+  // Calculamos el valor máximo del mes para darle un "techo" cómodo a la gráfica
+  const maxSpendInMonth = Math.max(...daily_series.map(d => d.spent_today));
+  const chartMaxValue = maxSpendInMonth > 0 ? maxSpendInMonth * 1.2 : 1000; // 20% de espacio extra arriba
+
+  // Configuramos las barras sin emojis
+  const chartData = daily_series.map((point) => {
+    // Si el gasto de hoy es 50% mayor al promedio, pintamos la barra de otro color
+    const isHighSpend = point.spent_today > statistics.daily_mean * 1.5; 
+    
+    return {
+      value: point.spent_today,
+      label: `${point.day}`,
+      frontColor: isHighSpend ? Colors.danger : Colors.primary, 
+    };
+  });
 
   const isAccelerating = calculus.acceleration > 0;
   const isVolatile = statistics.volatility_status === "Alta volatilidad";
+
+  // Obtenemos el total acumulado
+  const currentTotal = daily_series.length > 0 ? daily_series[daily_series.length - 1].cumulative : 0;
 
   return (
     <View style={styles.container}>
@@ -64,108 +78,119 @@ export default function AnalyticsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         
-        {/* 1. GRÁFICA DE GASTO ACUMULADO */}
+        {/* 1. GRÁFICA DE BARRAS (MÁS ALTA Y LIMPIA) */}
         <View style={styles.chartCard}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="trending-up-outline" size={20} color={Colors.primary} />
-            <Text style={styles.cardTitle}>Tu Dinero en el Tiempo</Text>
+          <View style={styles.cardHeaderTop}>
+            <View>
+              <Text style={styles.cardSubtitle}>Gasto Acumulado</Text>
+              <Text style={styles.heroNumber}>{formatCompact(currentTotal)}</Text>
+            </View>
+            <View style={styles.iconBadge}>
+              <Ionicons name="bar-chart" size={20} color={Colors.primary} />
+            </View>
           </View>
-          <Text style={styles.cardSubtitle}>
-            Mira cómo se acumulan tus gastos. Entre más plana sea la línea, mejor estás ahorrando.
-          </Text>
 
           {chartData.length > 0 ? (
-            <View style={styles.chartContainer}>
-              <LineChart
+            <View style={styles.chartWrapper}>
+              <BarChart
                 data={chartData}
-                width={width - 80}
-                height={180}
-                color={Colors.primary}
-                thickness={3}
-                startFillColor={Colors.primary}
-                endFillColor={`${Colors.primary}10`}
-                startOpacity={0.4}
-                endOpacity={0.05}
+                height={250}      // <-- Aumentamos la altura de 160 a 250
+                maxValue={chartMaxValue} // <-- Evita que las barras altas se corten
+                barWidth={22}     
+                spacing={16}      
                 initialSpacing={10}
-                noOfSections={4}
-                yAxisLabelTexts={Array.from({ length: 5 }).map((_, i) => 
-                  formatCompact((budget.total / 4) * i)
-                )}
-                yAxisTextStyle={{ color: Colors.textMuted, fontSize: 10 }}
-                xAxisLabelTextStyle={{ color: Colors.textMuted, fontSize: 10 }}
-                dataPointsColor={Colors.primary}
-                pointerConfig={{
-                    pointerLabelComponent: (items: any) => (
-                        <View style={styles.tooltip}>
-                            <Text style={styles.tooltipText}>{formatCompact(items[0].value)}</Text>
-                        </View>
-                    )
-                }}
+                roundedTop        
+                roundedBottom     
                 hideRules
-                yAxisColor="transparent"
-                xAxisColor={Colors.border}
-                areaChart
+                xAxisThickness={0}
+                yAxisThickness={0}
+                hideYAxisText     
+                xAxisLabelTextStyle={{ color: Colors.textMuted, fontSize: 11, fontWeight: '600' }}
                 isAnimated
+                renderTooltip={(item: any) => {
+                  return (
+                    <View style={styles.tooltip}>
+                      <Text style={styles.tooltipText}>Día {item.label}: {formatCompact(item.value)}</Text>
+                    </View>
+                  );
+                }}
               />
             </View>
           ) : (
-            <Text style={styles.emptyChart}>Aún no hay suficientes gastos para mostrar la tendencia.</Text>
+            <View style={styles.emptyChartContainer}>
+              <Ionicons name="wallet-outline" size={32} color={Colors.border} />
+              <Text style={styles.emptyChart}>Aún no hay suficientes datos</Text>
+            </View>
           )}
         </View>
 
-        {/* 2. RESUMEN DE RITMO (Cálculo traducido) */}
+        {/* 2. RESUMEN DE RITMO */}
         <Text style={styles.sectionTitle}>Ritmo de Gasto</Text>
         <View style={styles.grid}>
           <View style={styles.gridItem}>
             <View style={styles.iconCircle}>
-              <Ionicons name="speedometer-outline" size={22} color={Colors.primary} />
+              <Ionicons name="speedometer" size={22} color={Colors.primary} />
             </View>
             <Text style={styles.gridLabel}>Gasto Diario</Text>
-            <Text style={styles.gridValue}>{formatCompact(calculus.current_velocity)}</Text>
-            <Text style={styles.gridSub}>Promedio por día</Text>
+            <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
+              {formatCompact(calculus.current_velocity)}
+            </Text>
+            <Text style={styles.gridSub}>Promedio actual</Text>
           </View>
 
           <View style={styles.gridItem}>
             <View style={[styles.iconCircle, { backgroundColor: isAccelerating ? '#fee2e2' : '#dcfce7' }]}>
               <Ionicons 
-                name={isAccelerating ? "alert-circle-outline" : "checkmark-circle-outline"} 
+                name={isAccelerating ? "trending-up" : "trending-down"} 
                 size={22} 
                 color={isAccelerating ? Colors.danger : Colors.accent} 
               />
             </View>
             <Text style={styles.gridLabel}>Estado</Text>
-            <Text style={[styles.gridValue, { color: isAccelerating ? Colors.danger : Colors.accent }]}>
+            <Text 
+              style={[styles.gridValue, { color: isAccelerating ? Colors.danger : Colors.accent }]}
+              adjustsFontSizeToFit 
+              numberOfLines={1}
+            >
               {isAccelerating ? "Gastando más" : "Ahorrando"}
             </Text>
-            <Text style={styles.gridSub}>{isAccelerating ? "Tu ritmo subió" : "Vas por buen camino"}</Text>
+            <Text style={styles.gridSub} numberOfLines={1}>{isAccelerating ? "Tu ritmo subió" : "Buen camino"}</Text>
           </View>
         </View>
 
-        {/* 3. PREDICCIÓN (Estadística traducida) */}
-        <Text style={styles.sectionTitle}>¿Cómo terminarás el mes?</Text>
+        {/* 3. PREDICCIÓN */}
+        <Text style={styles.sectionTitle}>Estimación a fin de mes</Text>
         <View style={styles.grid}>
           <View style={styles.gridItem}>
             <View style={[styles.iconCircle, { backgroundColor: isVolatile ? '#fef9c3' : Colors.background }]}>
-              <Ionicons name="git-commit-outline" size={22} color={isVolatile ? '#ca8a04' : Colors.primary} />
+              <Ionicons name="pulse" size={22} color={isVolatile ? '#ca8a04' : Colors.primary} />
             </View>
             <Text style={styles.gridLabel}>Variabilidad</Text>
-            <Text style={styles.gridValue}>{isVolatile ? "Inestable" : "Estable"}</Text>
-            <Text style={styles.gridSub}>Consistencia de gastos</Text>
+            <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
+              {isVolatile ? "Inestable" : "Estable"}
+            </Text>
+            <Text style={styles.gridSub}>Consistencia</Text>
           </View>
 
           <View style={styles.gridItem}>
             <View style={[styles.iconCircle, { backgroundColor: projection.will_exceed_budget ? '#fee2e2' : '#dcfce7' }]}>
-              <Ionicons name="calendar-outline" size={22} color={projection.will_exceed_budget ? Colors.danger : Colors.accent} />
+              <Ionicons name="flag" size={22} color={projection.will_exceed_budget ? Colors.danger : Colors.accent} />
             </View>
-            <Text style={styles.gridLabel}>Estimado Final</Text>
-            <Text style={[styles.gridValue, { color: projection.will_exceed_budget ? Colors.danger : Colors.text }]}>
+            <Text style={styles.gridLabel}>Proyección</Text>
+            <Text 
+              style={[styles.gridValue, { color: projection.will_exceed_budget ? Colors.danger : Colors.text }]}
+              adjustsFontSizeToFit 
+              numberOfLines={1}
+            >
               {formatCompact(projection.end_of_month_estimate)}
             </Text>
-            <Text style={styles.gridSub}>{projection.will_exceed_budget ? "Te pasarás del límite" : "Dentro del presupuesto"}</Text>
+            <Text style={styles.gridSub} numberOfLines={1}>
+              {projection.will_exceed_budget ? "Te pasarás" : "En presupuesto"}
+            </Text>
           </View>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
     </View>
   );
@@ -173,41 +198,66 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { padding: 20, paddingTop: 10 },
+  scroll: { paddingHorizontal: 16, paddingTop: 12 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadingText: { color: Colors.primary, fontWeight: "600", marginTop: 10 },
   errorText: { color: Colors.textMuted, fontSize: 15, marginTop: 10 },
   
   chartCard: {
     backgroundColor: Colors.card,
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 24,
+    borderRadius: 28,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    marginBottom: 28,
     borderWidth: 1,
-    borderColor: Colors.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    borderColor: 'rgba(0,0,0,0.03)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  cardTitle: { fontSize: 18, fontWeight: "800", color: Colors.text },
-  cardSubtitle: { fontSize: 13, color: Colors.textMuted, marginBottom: 20, lineHeight: 18 },
-  chartContainer: { marginLeft: -10 },
-  emptyChart: { textAlign: "center", color: Colors.textMuted, marginVertical: 30, fontStyle: 'italic' },
+  cardHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  cardSubtitle: { fontSize: 14, color: Colors.textMuted, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroNumber: { fontSize: 36, fontWeight: '900', color: Colors.text, letterSpacing: -1 },
+  iconBadge: {
+    backgroundColor: `${Colors.primary}15`,
+    padding: 8,
+    borderRadius: 12,
+  },
+  
+  chartWrapper: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginLeft: -10, 
+    marginTop: 10, // Un poco de espacio arriba para que el tooltip respire
+  },
+  emptyChartContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 12 },
+  emptyChart: { color: Colors.textMuted, fontSize: 14, fontWeight: '500' },
 
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     color: Colors.text,
     marginBottom: 16,
-    paddingLeft: 4
+    paddingLeft: 4,
+    letterSpacing: -0.5,
   },
   grid: {
     flexDirection: "row",
-    gap: 14,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 28,
   },
   gridItem: {
     flex: 1,
@@ -215,28 +265,47 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(0,0,0,0.03)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: `${Colors.primary}10`,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  gridLabel: { fontSize: 13, color: Colors.textMuted, marginBottom: 4 },
-  gridValue: { fontSize: 17, fontWeight: "800", color: Colors.text, marginBottom: 2 },
-  gridSub: { fontSize: 11, color: Colors.textMuted },
+  gridLabel: { fontSize: 12, color: Colors.textMuted, marginBottom: 4, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  gridValue: { fontSize: 20, fontWeight: "800", color: Colors.text, marginBottom: 4 },
+  gridSub: { fontSize: 12, color: Colors.textMuted },
+  
   tooltip: {
-      backgroundColor: Colors.text,
-      padding: 4,
-      borderRadius: 4,
+      backgroundColor: Colors.text, 
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10, 
+      marginBottom: 12, 
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 5,
   },
   tooltipText: {
-      color: 'white',
-      fontSize: 10,
-      fontWeight: 'bold'
+      color: '#ffffff',
+      fontSize: 13,
+      fontWeight: '800'
   }
 });

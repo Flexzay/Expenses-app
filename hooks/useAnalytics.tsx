@@ -5,6 +5,5 @@ export function useAnalytics() {
   return useQuery({
     queryKey: ["analytics", "daily"],
     queryFn: getDailyAnalyticsService,
-    staleTime: 1000 * 60 * 5, 
   });
 }
