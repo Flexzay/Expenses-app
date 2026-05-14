@@ -48,9 +48,10 @@ export default function AnalyticsScreen() {
     );
   }
 
-  const { calculus, statistics, projection, daily_series } = data;
+  // Desestructuramos `insights` para el Teorema de Bayes
+  const { calculus, statistics, projection, insights, daily_series } = data;
 
-  const maxSpendInMonth = Math.max(...daily_series.map(d => d.spent_today));
+  const maxSpendInMonth = daily_series.length > 0 ? Math.max(...daily_series.map(d => d.spent_today)) : 0;
   const chartMaxValue = maxSpendInMonth > 0 ? maxSpendInMonth * 1.2 : 1000; 
 
   const chartData = daily_series.map((point) => {
@@ -201,6 +202,38 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
+        {/* 4. INTELIGENCIA FINANCIERA (TEOREMA DE BAYES) */}
+        <Text style={styles.sectionTitle}>Inteligencia Financiera</Text>
+        <View style={[styles.insightCard, insights.is_weekend_today && styles.insightCardActive]}>
+          <View style={styles.insightHeader}>
+            <View style={styles.insightIconWrapper}>
+              <Ionicons name="hardware-chip" size={24} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.insightTitle}>Patrón de Conducta Detectado</Text>
+              <Text style={styles.insightSub}>Análisis Bayesiano</Text>
+            </View>
+          </View>
+
+          <Text style={styles.insightText}>
+            Basado en tu historial matemático, cuando es <Text style={{fontWeight: '800'}}>fin de semana</Text>, tienes un
+          </Text>
+          
+          <View style={styles.riskContainer}>
+            <Text style={[
+              styles.riskPercentage, 
+              { color: insights.weekend_overspend_risk > 50 ? Colors.danger : Colors.accent }
+            ]}>
+              {insights.weekend_overspend_risk}% de probabilidad
+            </Text>
+          </View>
+
+          <Text style={styles.insightTextBottom}>
+            de exceder tu límite diario de gastos. 
+            {insights.is_weekend_today ? " ¡Cuidado, hoy es fin de semana!" : " Mantén la guardia alta cuando llegue el sábado."}
+          </Text>
+        </View>
+
         <View style={{ height: 60 }} />
       </ScrollView>
     </View>
@@ -277,6 +310,21 @@ const styles = StyleSheet.create({
   rangeValueOptimistic: { fontSize: 18, fontWeight: '800', color: Colors.accent },
   rangeValuePessimistic: { fontSize: 18, fontWeight: '800', color: Colors.danger },
   rangeDivider: { width: 1, height: 30, backgroundColor: Colors.border, marginHorizontal: 12 },
+
+  // --- ESTILOS DE LA TARJETA DE BAYES ---
+  insightCard: {
+    backgroundColor: Colors.card, borderRadius: 24, padding: 24, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
+    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 }, android: { elevation: 2 } }),
+  },
+  insightCardActive: { borderColor: `${Colors.danger}50`, backgroundColor: '#fffcfc' },
+  insightHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  insightIconWrapper: { backgroundColor: `${Colors.primary}15`, padding: 10, borderRadius: 14 },
+  insightTitle: { fontSize: 16, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
+  insightSub: { fontSize: 12, color: Colors.primary, fontWeight: '700', textTransform: 'uppercase' },
+  insightText: { fontSize: 14, color: Colors.textMuted, lineHeight: 22 },
+  insightTextBottom: { fontSize: 14, color: Colors.textMuted, lineHeight: 22, marginTop: 4 },
+  riskContainer: { marginVertical: 8, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: Colors.background, borderRadius: 12, alignSelf: 'flex-start' },
+  riskPercentage: { fontSize: 24, fontWeight: '900', letterSpacing: -1 },
 
   tooltip: { backgroundColor: Colors.text, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 10, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 },
   tooltipText: { color: '#ffffff', fontSize: 13, fontWeight: '800' }

@@ -30,6 +30,10 @@ export interface AnalyticsResponse {
     confidence_level: string;
     will_exceed_budget: boolean;
   };
+  insights: {
+    weekend_overspend_risk: number;
+    is_weekend_today: boolean;
+  };
   daily_series: DailyDataPoint[];
 }
 
