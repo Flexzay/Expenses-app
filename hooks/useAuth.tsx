@@ -12,6 +12,7 @@ export function useRegister() {
     mutationFn: registerService,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({queryKey: ["collaborators"]})
       router.replace("/(main)/(tabs)/home"); 
     },
     onError: (error) => {
