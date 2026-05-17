@@ -14,13 +14,27 @@ export interface AnalyticsResponse {
   };
   calculus: {
     current_velocity: number;
+    instant_velocity: number;
     acceleration: number;
     acceleration_status: "Acelerando" | "Frenando" | "Constante";
   };
   statistics: {
     daily_mean: number;
+    median: number;
+    mode_category: string;
+    mode_count: number;
+    expected_value: number;
+    percentile_90: number;
     standard_deviation: number;
+    coefficient_of_variation: number;
     volatility_status: "Alta volatilidad" | "Estable";
+  };
+  probability: {
+    zero_spend_prob: number;
+    z_score: number;
+    binomial_success_prob: number;
+    binomial_n_days: number;
+    binomial_k_target: number;
   };
   projection: {
     end_of_month_estimate: number;
