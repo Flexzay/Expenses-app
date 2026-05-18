@@ -1,5 +1,6 @@
 import { useAnalytics } from "@/hooks/useAnalytics";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import React from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -23,6 +24,8 @@ function formatCompact(n: number) {
 
 export default function AnalyticsScreen() {
   const { data, isLoading, isError } = useAnalytics();
+
+  const viewMode: "ambos" | "diferencial" | "probabilidad" = "diferencial"; 
 
   if (isLoading) {
     return (
@@ -72,7 +75,32 @@ export default function AnalyticsScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         
-        {/* 1. GRÁFICA DE BARRAS */}
+        {/* TEXTOS EDUCATIVOS SEGÚN LA VISTA */}
+        {viewMode === "diferencial" && (
+          <View style={styles.explanationBox}>
+            <View style={styles.explanationHeader}>
+              <Ionicons name="speedometer-outline" size={20} color={Colors.primary} />
+              <Text style={styles.explanationTitle}>Cálculo Diferencial en tus gastos</Text>
+            </View>
+            <Text style={styles.explanationText}>
+              Usamos la <Text style={styles.bold}>Primera Derivada (Velocidad)</Text> para medir exactamente a qué ritmo gastas por día. Luego, aplicamos la <Text style={styles.bold}>Segunda Derivada (Aceleración)</Text> para detectar si ese ritmo está aumentando o disminuyendo respecto a los días anteriores.
+            </Text>
+          </View>
+        )}
+
+        {viewMode === "probabilidad" && (
+          <View style={styles.explanationBox}>
+            <View style={styles.explanationHeader}>
+              <Ionicons name="stats-chart-outline" size={20} color={Colors.primary} />
+              <Text style={styles.explanationTitle}>Probabilidad y Estadística</Text>
+            </View>
+            <Text style={styles.explanationText}>
+              Usamos <Text style={styles.bold}>Distribuciones (Normal, Poisson, Binomial)</Text> y el <Text style={styles.bold}>Teorema de Bayes</Text> para encontrar tus patrones de comportamiento, medir tu volatilidad y calcular el riesgo condicional de quedarte sin presupuesto.
+            </Text>
+          </View>
+        )}
+
+        {/* 1. GRÁFICA DE BARRAS (Se muestra siempre porque es la base de todo) */}
         <View style={styles.chartCard}>
           <View style={styles.cardHeaderTop}>
             <View>
@@ -116,182 +144,195 @@ export default function AnalyticsScreen() {
           )}
         </View>
 
-        {/* 2. RITMO DE GASTO (Cálculo Diferencial) */}
-        <Text style={styles.sectionTitle}>Cálculo Diferencial</Text>
-        <View style={styles.grid}>
-          <View style={styles.gridItem}>
-            <View style={styles.iconCircle}>
-              <Ionicons name="speedometer" size={22} color={Colors.primary} />
-            </View>
-            <Text style={styles.gridLabel}>Velocidad</Text>
-            <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
-              {formatCompact(calculus.current_velocity)}/día
-            </Text>
-            <Text style={styles.gridSub}>Derivada 1ra (Tendencia)</Text>
-          </View>
+        {/* ==============================================
+            ZONA DE CÁLCULO DIFERENCIAL
+        ============================================== */}
+        {(viewMode === "ambos" || viewMode === "diferencial") && (
+          <>
+            <Text style={styles.sectionTitle}>Cálculo Diferencial</Text>
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <View style={styles.iconCircle}>
+                  <Ionicons name="speedometer" size={22} color={Colors.primary} />
+                </View>
+                <Text style={styles.gridLabel}>Velocidad</Text>
+                <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
+                  {formatCompact(calculus.current_velocity)}/día
+                </Text>
+                <Text style={styles.gridSub}>Derivada 1ra (Tendencia)</Text>
+              </View>
 
-          <View style={styles.gridItem}>
-            <View style={[styles.iconCircle, { backgroundColor: isAccelerating ? '#fee2e2' : '#dcfce7' }]}>
-              <Ionicons 
-                name={isAccelerating ? "trending-up" : "trending-down"} 
-                size={22} 
-                color={isAccelerating ? Colors.danger : Colors.accent} 
-              />
+              <View style={styles.gridItem}>
+                <View style={[styles.iconCircle, { backgroundColor: isAccelerating ? '#fee2e2' : '#dcfce7' }]}>
+                  <Ionicons 
+                    name={isAccelerating ? "trending-up" : "trending-down"} 
+                    size={22} 
+                    color={isAccelerating ? Colors.danger : Colors.accent} 
+                  />
+                </View>
+                <Text style={styles.gridLabel}>Aceleración</Text>
+                <Text 
+                  style={[styles.gridValue, { color: isAccelerating ? Colors.danger : Colors.accent }]}
+                  adjustsFontSizeToFit 
+                  numberOfLines={1}
+                >
+                  {isAccelerating ? "Acelerando" : "Frenando"}
+                </Text>
+                <Text style={styles.gridSub} numberOfLines={1}>
+                  {isAccelerating ? "Derivada 2da Positiva" : "Buen control de gasto"}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.gridLabel}>Aceleración</Text>
-            <Text 
-              style={[styles.gridValue, { color: isAccelerating ? Colors.danger : Colors.accent }]}
-              adjustsFontSizeToFit 
-              numberOfLines={1}
-            >
-              {isAccelerating ? "Acelerando" : "Frenando"}
-            </Text>
-            <Text style={styles.gridSub} numberOfLines={1}>
-              {isAccelerating ? "Derivada 2da Positiva" : "Buen control de gasto"}
-            </Text>
-          </View>
-        </View>
+          </>
+        )}
 
-        {/* 3. ESTADÍSTICA DESCRIPTIVA AVANZADA */}
-        <Text style={styles.sectionTitle}>Estadística Descriptiva</Text>
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Valor Típico (Mediana)</Text>
-            <Text style={styles.statValue}>{formatCompact(statistics.median)}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          
-          <View style={styles.statRow}>
-            <View>
-              <Text style={styles.statLabel}>Categoría frecuente (Moda)</Text>
-              <Text style={[styles.statLabel, {fontSize: 11}]}>{statistics.mode_count} transacciones</Text>
-            </View>
-            <Text style={styles.statValue}>{statistics.mode_category}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          
-          <View style={styles.statRow}>
-            <View>
-              <Text style={styles.statLabel}>Valor Esperado E[X]</Text>
-              <Text style={[styles.statLabel, {fontSize: 11}]}>Predicción para mañana</Text>
-            </View>
-            <Text style={[styles.statValue, {color: Colors.primary}]}>{formatCompact(statistics.expected_value)}</Text>
-          </View>
-          <View style={styles.statDivider} />
+        {/* ==============================================
+            ZONA DE PROBABILIDAD Y ESTADÍSTICA
+        ============================================== */}
+        {(viewMode === "ambos" || viewMode === "probabilidad") && (
+          <>
+            {/* ESTADÍSTICA DESCRIPTIVA AVANZADA */}
+            <Text style={styles.sectionTitle}>Estadística Descriptiva</Text>
+            <View style={styles.statsCard}>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Valor Típico (Mediana)</Text>
+                <Text style={styles.statValue}>{formatCompact(statistics.median)}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              
+              <View style={styles.statRow}>
+                <View>
+                  <Text style={styles.statLabel}>Categoría frecuente (Moda)</Text>
+                  <Text style={[styles.statLabel, {fontSize: 11}]}>{statistics.mode_count} transacciones</Text>
+                </View>
+                <Text style={styles.statValue}>{statistics.mode_category}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              
+              <View style={styles.statRow}>
+                <View>
+                  <Text style={styles.statLabel}>Valor Esperado E[X]</Text>
+                  <Text style={[styles.statLabel, {fontSize: 11}]}>Predicción para mañana</Text>
+                </View>
+                <Text style={[styles.statValue, {color: Colors.primary}]}>{formatCompact(statistics.expected_value)}</Text>
+              </View>
+              <View style={styles.statDivider} />
 
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Percentil 90 (Límite sano)</Text>
-            <Text style={styles.statValue}>{formatCompact(statistics.percentile_90)}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Coef. de Variación</Text>
-            <Text style={[styles.statValue, { color: isVolatile ? Colors.danger : Colors.accent }]}>
-              {statistics.coefficient_of_variation.toFixed(1)}%
-            </Text>
-          </View>
-          {isVolatile && (
-            <Text style={styles.alertText}>Tus gastos son muy irregulares (Volatilidad alta). Intenta apegarte más a tu presupuesto.</Text>
-          )}
-        </View>
-
-        {/* 4. PREDICCIÓN PROBABILÍSTICA (Distribución Normal) */}
-        <Text style={styles.sectionTitle}>Distribución Normal</Text>
-        <View style={styles.projectionCard}>
-          <View style={styles.projectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="analytics-outline" size={24} color={Colors.primary} />
-              <Text style={styles.projectionTitle}>Proyección Fin de Mes</Text>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Percentil 90 (Límite sano)</Text>
+                <Text style={styles.statValue}>{formatCompact(statistics.percentile_90)}</Text>
+              </View>
+              <View style={styles.statDivider} />
+              
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Coef. de Variación</Text>
+                <Text style={[styles.statValue, { color: isVolatile ? Colors.danger : Colors.accent }]}>
+                  {statistics.coefficient_of_variation.toFixed(1)}%
+                </Text>
+              </View>
+              {isVolatile && (
+                <Text style={styles.alertText}>Tus gastos son muy irregulares (Volatilidad alta). Intenta apegarte más a tu presupuesto.</Text>
+              )}
             </View>
-            <View style={[styles.volatilityBadge, { backgroundColor: isVolatile ? '#fef9c3' : '#dcfce7' }]}>
-              <Ionicons 
-                name={isVolatile ? "warning" : "checkmark-circle"} 
-                size={14} 
-                color={isVolatile ? '#ca8a04' : Colors.accent} 
-              />
-              <Text style={[styles.volatilityText, { color: isVolatile ? '#ca8a04' : Colors.accent }]}>
-                {isVolatile ? 'Alta Desviación' : 'Baja Desviación'}
+
+            {/* PREDICCIÓN PROBABILÍSTICA (Distribución Normal) */}
+            <Text style={styles.sectionTitle}>Distribución Normal</Text>
+            <View style={styles.projectionCard}>
+              <View style={styles.projectionHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="analytics-outline" size={24} color={Colors.primary} />
+                  <Text style={styles.projectionTitle}>Proyección Fin de Mes</Text>
+                </View>
+                <View style={[styles.volatilityBadge, { backgroundColor: isVolatile ? '#fef9c3' : '#dcfce7' }]}>
+                  <Ionicons 
+                    name={isVolatile ? "warning" : "checkmark-circle"} 
+                    size={14} 
+                    color={isVolatile ? '#ca8a04' : Colors.accent} 
+                  />
+                  <Text style={[styles.volatilityText, { color: isVolatile ? '#ca8a04' : Colors.accent }]}>
+                    {isVolatile ? 'Alta Desviación' : 'Baja Desviación'}
+                  </Text>
+                </View>
+              </View>
+              
+              <Text style={styles.projectionMainNumber}>
+                {formatCompact(projection.end_of_month_estimate)}
               </Text>
-            </View>
-          </View>
-          
-          <Text style={styles.projectionMainNumber}>
-            {formatCompact(projection.end_of_month_estimate)}
-          </Text>
-          <Text style={styles.projectionSub}>
-            Con un {projection.confidence_level} de certeza (Margen de Error: ±{formatCompact(projection.margin_of_error)}), cerrarás en el siguiente rango:
-          </Text>
+              <Text style={styles.projectionSub}>
+                Con un {projection.confidence_level} de certeza (Margen de Error: ±{formatCompact(projection.margin_of_error)}), cerrarás en el siguiente rango:
+              </Text>
 
-          <View style={styles.rangeContainer}>
-            <View style={styles.rangeBox}>
-              <Text style={styles.rangeLabel}>Escenario Ideal</Text>
-              <Text style={styles.rangeValueOptimistic}>{formatCompact(projection.optimistic_estimate)}</Text>
+              <View style={styles.rangeContainer}>
+                <View style={styles.rangeBox}>
+                  <Text style={styles.rangeLabel}>Escenario Ideal</Text>
+                  <Text style={styles.rangeValueOptimistic}>{formatCompact(projection.optimistic_estimate)}</Text>
+                </View>
+                <View style={styles.rangeDivider} />
+                <View style={styles.rangeBox}>
+                  <Text style={styles.rangeLabel}>Peor Escenario</Text>
+                  <Text style={styles.rangeValuePessimistic}>{formatCompact(projection.pessimistic_estimate)}</Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.rangeDivider} />
-            <View style={styles.rangeBox}>
-              <Text style={styles.rangeLabel}>Peor Escenario</Text>
-              <Text style={styles.rangeValuePessimistic}>{formatCompact(projection.pessimistic_estimate)}</Text>
-            </View>
-          </View>
-        </View>
 
-        {/* 5. INTELIGENCIA FINANCIERA (Poisson, Binomial & Bayes) */}
-        <Text style={styles.sectionTitle}>Teoría de la Probabilidad</Text>
-        
-        <View style={styles.grid}>
-           <View style={styles.gridItem}>
-            <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
-              <Ionicons name="leaf" size={22} color={Colors.accent} />
-            </View>
-            <Text style={styles.gridLabel}>Dist. Poisson</Text>
-            <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
-              {probability.zero_spend_prob.toFixed(1)}%
-            </Text>
-            <Text style={styles.gridSub}>Probabilidad de NO gastar nada hoy</Text>
-          </View>
+            {/* INTELIGENCIA FINANCIERA (Poisson, Binomial & Bayes) */}
+            <Text style={styles.sectionTitle}>Teoría de la Probabilidad</Text>
+            
+            <View style={styles.grid}>
+              <View style={styles.gridItem}>
+                <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
+                  <Ionicons name="leaf" size={22} color={Colors.accent} />
+                </View>
+                <Text style={styles.gridLabel}>Dist. Poisson</Text>
+                <Text style={styles.gridValue} adjustsFontSizeToFit numberOfLines={1}>
+                  {probability.zero_spend_prob.toFixed(1)}%
+                </Text>
+                <Text style={styles.gridSub}>Probabilidad de NO gastar nada hoy</Text>
+              </View>
 
-          <View style={styles.gridItem}>
-            <View style={[styles.iconCircle, { backgroundColor: '#e0e7ff' }]}>
-              <Ionicons name="dice" size={22} color="#4f46e5" />
+              <View style={styles.gridItem}>
+                <View style={[styles.iconCircle, { backgroundColor: '#e0e7ff' }]}>
+                  <Ionicons name="dice" size={22} color="#4f46e5" />
+                </View>
+                <Text style={styles.gridLabel}>Dist. Binomial</Text>
+                <Text style={[styles.gridValue, { color: "#4f46e5" }]} adjustsFontSizeToFit numberOfLines={1}>
+                  {probability.binomial_success_prob.toFixed(1)}%
+                </Text>
+                <Text style={styles.gridSub}>De lograr meta {probability.binomial_k_target} de {probability.binomial_n_days} días restantes</Text>
+              </View>
             </View>
-            <Text style={styles.gridLabel}>Dist. Binomial</Text>
-            <Text style={[styles.gridValue, { color: "#4f46e5" }]} adjustsFontSizeToFit numberOfLines={1}>
-              {probability.binomial_success_prob.toFixed(1)}%
-            </Text>
-            <Text style={styles.gridSub}>De lograr meta {probability.binomial_k_target} de {probability.binomial_n_days} días restantes</Text>
-          </View>
-        </View>
 
-        <View style={[styles.insightCard, insights.is_weekend_today && styles.insightCardActive, {marginTop: -16}]}>
-          <View style={styles.insightHeader}>
-            <View style={[styles.insightIconWrapper, {backgroundColor: '#fee2e2'}]}>
-              <Ionicons name="git-network-outline" size={24} color={Colors.danger} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.insightTitle}>Teorema de Bayes</Text>
-              <Text style={[styles.insightSub, {color: Colors.danger}]}>Riesgo Condicional</Text>
-            </View>
-          </View>
+            <View style={[styles.insightCard, insights.is_weekend_today && styles.insightCardActive, {marginTop: -16}]}>
+              <View style={styles.insightHeader}>
+                <View style={[styles.insightIconWrapper, {backgroundColor: '#fee2e2'}]}>
+                  <Ionicons name="git-network-outline" size={24} color={Colors.danger} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.insightTitle}>Teorema de Bayes</Text>
+                  <Text style={[styles.insightSub, {color: Colors.danger}]}>Riesgo Condicional</Text>
+                </View>
+              </View>
 
-          <Text style={styles.insightText}>
-            Basado en tu historial, dado que es <Text style={{fontWeight: '800'}}>fin de semana</Text>, la probabilidad matemática de exceder tu límite de gastos hoy es del:
-          </Text>
-          
-          <View style={styles.riskContainer}>
-            <Text style={[
-              styles.riskPercentage, 
-              { color: insights.weekend_overspend_risk > 50 ? Colors.danger : Colors.accent }
-            ]}>
-              {insights.weekend_overspend_risk}%
-            </Text>
-          </View>
-          {insights.is_weekend_today && (
-             <Text style={[styles.insightText, {color: Colors.danger, fontWeight: '700', marginTop: 8}]}>
-               ¡Hoy es fin de semana, cuida tu bolsillo!
-             </Text>
-          )}
-        </View>
+              <Text style={styles.insightText}>
+                Basado en tu historial, dado que es <Text style={{fontWeight: '800'}}>fin de semana</Text>, la probabilidad matemática de exceder tu límite de gastos hoy es del:
+              </Text>
+              
+              <View style={styles.riskContainer}>
+                <Text style={[
+                  styles.riskPercentage, 
+                  { color: insights.weekend_overspend_risk > 50 ? Colors.danger : Colors.accent }
+                ]}>
+                  {insights.weekend_overspend_risk}%
+                </Text>
+              </View>
+              {insights.is_weekend_today && (
+                <Text style={[styles.insightText, {color: Colors.danger, fontWeight: '700', marginTop: 8}]}>
+                  ¡Hoy es fin de semana, cuida tu bolsillo!
+                </Text>
+              )}
+            </View>
+          </>
+        )}
 
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -301,15 +342,20 @@ export default function AnalyticsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  
+  // ESTILOS TEXTOS EXPLICATIVOS
+  explanationBox: { backgroundColor: '#eef2ff', padding: 16, borderRadius: 16, marginHorizontal: 16, marginTop: 10, marginBottom: 20, borderWidth: 1, borderColor: '#c7d2fe' },
+  explanationHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
+  explanationTitle: { fontSize: 15, fontWeight: '800', color: Colors.primary },
+  explanationText: { fontSize: 13, color: '#4f46e5', lineHeight: 20 },
+  bold: { fontWeight: '800' },
+
   scroll: { paddingHorizontal: 16, paddingTop: 12 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
   loadingText: { color: Colors.primary, fontWeight: "600", marginTop: 10 },
   errorText: { color: Colors.textMuted, fontSize: 15, marginTop: 10 },
   
-  chartCard: {
-    backgroundColor: Colors.card, borderRadius: 28, paddingVertical: 24, paddingHorizontal: 20, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16 }, android: { elevation: 3 } }),
-  },
+  chartCard: { backgroundColor: Colors.card, borderRadius: 28, paddingVertical: 24, paddingHorizontal: 20, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16 }, android: { elevation: 3 } }) },
   cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
   cardSubtitle: { fontSize: 14, color: Colors.textMuted, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   heroNumber: { fontSize: 36, fontWeight: '900', color: Colors.text, letterSpacing: -1 },
@@ -321,36 +367,26 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: "800", color: Colors.text, marginBottom: 16, paddingLeft: 4, letterSpacing: -0.5 },
   
   grid: { flexDirection: "row", gap: 12, marginBottom: 28 },
-  gridItem: {
-    flex: 1, backgroundColor: Colors.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 }, android: { elevation: 2 } }),
-  },
+  gridItem: { flex: 1, backgroundColor: Colors.card, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 }, android: { elevation: 2 } }) },
   iconCircle: { width: 42, height: 42, borderRadius: 12, backgroundColor: `${Colors.primary}10`, justifyContent: "center", alignItems: "center", marginBottom: 14 },
   gridLabel: { fontSize: 11, color: Colors.textMuted, marginBottom: 4, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   gridValue: { fontSize: 20, fontWeight: "800", color: Colors.text, marginBottom: 4 },
   gridSub: { fontSize: 11, color: Colors.textMuted },
 
-  statsCard: {
-    backgroundColor: Colors.card, borderRadius: 24, padding: 20, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 }, android: { elevation: 2 } }),
-  },
+  statsCard: { backgroundColor: Colors.card, borderRadius: 24, padding: 20, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 }, android: { elevation: 2 } }) },
   statRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
   statLabel: { fontSize: 14, color: Colors.textMuted, fontWeight: '500' },
   statValue: { fontSize: 16, fontWeight: '800', color: Colors.text },
   statDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 4 },
   alertText: { marginTop: 12, fontSize: 12, color: Colors.danger, backgroundColor: '#fee2e2', padding: 10, borderRadius: 8, fontWeight: '600' },
 
-  projectionCard: {
-    backgroundColor: Colors.card, borderRadius: 24, padding: 24, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)',
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 }, android: { elevation: 2 } }),
-  },
+  projectionCard: { backgroundColor: Colors.card, borderRadius: 24, padding: 24, marginBottom: 28, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 }, android: { elevation: 2 } }) },
   projectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   projectionTitle: { fontSize: 14, fontWeight: '800', color: Colors.textMuted, textTransform: 'uppercase' },
   volatilityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8, borderRadius: 8 },
   volatilityText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   projectionMainNumber: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1.5, marginBottom: 8 },
   projectionSub: { fontSize: 13, color: Colors.textMuted, lineHeight: 20, marginBottom: 24 },
-  
   rangeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.background, borderRadius: 16, padding: 16 },
   rangeBox: { flex: 1, alignItems: 'center' },
   rangeLabel: { fontSize: 12, color: Colors.textMuted, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase' },
